@@ -38,8 +38,8 @@ public class ThreadExecuteQueue {
 						Thread t = instance.take();
                                                 if(t!=null){
                                                         s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "Thread run Begin, CLASS_NAME = " + t.getClass().getName());
-                                                        if (t.getClass() == MBeanInvocationHandler.StoreAttributeWorker.class){
-                                                            MBeanInvocationHandler.StoreAttributeWorker tt = (MBeanInvocationHandler.StoreAttributeWorker)t;
+                                                        if (t.getClass() == ConfigBeanInvocationHandler.StoreAttributeWorker.class){
+                                                            ConfigBeanInvocationHandler.StoreAttributeWorker tt = (ConfigBeanInvocationHandler.StoreAttributeWorker)t;
                                                             s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "Thread run Set"
                                                                          + ", keyName = " + tt.getKeyName() 
                                                                          + "AttributeName = " + tt.getAttributeName() 
@@ -74,8 +74,8 @@ public class ThreadExecuteQueue {
 	public synchronized void put(Thread th){
                 final String loggerMethodName = "put";
                 s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "Begin to put a thread to ThreadExecuteQueue, CLASS_NAME = " + th.getClass().getName());
-                if (th.getClass() == MBeanInvocationHandler.StoreAttributeWorker.class){
-                    MBeanInvocationHandler.StoreAttributeWorker tt = (MBeanInvocationHandler.StoreAttributeWorker)th;
+                if (th.getClass() == ConfigBeanInvocationHandler.StoreAttributeWorker.class){
+                    ConfigBeanInvocationHandler.StoreAttributeWorker tt = (ConfigBeanInvocationHandler.StoreAttributeWorker)th;
                     s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "Thread put"
                                  + ", keyName = " + tt.getKeyName() 
                                  + "AttributeName = " + tt.getAttributeName() 
@@ -93,8 +93,8 @@ public class ThreadExecuteQueue {
                 }
 		Thread th = queue.getFirst();
 		queue.removeFirst();
-                if (th.getClass() == MBeanInvocationHandler.StoreAttributeWorker.class){
-                    MBeanInvocationHandler.StoreAttributeWorker tt = (MBeanInvocationHandler.StoreAttributeWorker)th;
+                if (th.getClass() == ConfigBeanInvocationHandler.StoreAttributeWorker.class){
+                    ConfigBeanInvocationHandler.StoreAttributeWorker tt = (ConfigBeanInvocationHandler.StoreAttributeWorker)th;
                     s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "Thread take, CLASS_NAME = " + th.getClass().getName()
                                  + ", keyName = " + tt.getKeyName() 
                                  + "AttributeName = " + tt.getAttributeName() 

@@ -141,7 +141,7 @@ public class ConfigManager {
 	public static void Destroy() {
 		XmlPersistence.Clear();
 		// DbProperties.Clear();
-		MBeanInvocationHandler.Clear();
+		ConfigBeanInvocationHandler.Clear();
 		getInstance().unregisterMBeans();
 		//
 		// configMBean = null;
@@ -260,7 +260,7 @@ public class ConfigManager {
 			throws NotCompliantMBeanException, NoSuchMethodException, Exception {
 		// StandardMBean mbean = createMBean(intf, impl, description);
 		
-		MBeanDetail<T> detail = new MBeanDetail<T>(intf, impl, objName, description, this.defaultPersistence);
+		ConfigBeanDetail<T> detail = new ConfigBeanDetail<T>(intf, impl, objName, description, this.defaultPersistence);
 		T proxy = generateProxy(detail);
 		StandardMBean mbean = new StandardMBeanWithAnnotations(proxy, intf, description);
 		registerMBean(mbean, objName, intf);
@@ -529,11 +529,11 @@ public class ConfigManager {
 	 * @throws IllegalArgumentException
 	 * @throws NoSuchMethodException
 	 */
-	private <T> T generateProxy(MBeanDetail<T> detail)
+	private <T> T generateProxy(ConfigBeanDetail<T> detail)
 			throws IllegalArgumentException, NoSuchMethodException, PersistenceException {
 		Class<T> intf = detail.getIntf();
 		return intf.cast(Proxy.newProxyInstance(intf.getClassLoader(), new Class[] { intf },
-				new MBeanInvocationHandler<T>(detail)));
+				new ConfigBeanInvocationHandler<T>(detail)));
 	}
 
 	/**

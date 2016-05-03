@@ -1,7 +1,7 @@
 package com.yuwnloy.disconman.persistences;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.yuwnloy.disconman.MBeanDetail;
+import com.yuwnloy.disconman.ConfigBeanDetail;
 import com.yuwnloy.disconman.exceptions.PersistenceException;
 /**
  * 
@@ -72,7 +72,7 @@ public class PersistenceFactory {
 				}
 
 				@Override
-				public void storeProperties(String domain, ConcurrentHashMap<String, MBeanDetail<?>> map)
+				public void storeProperties(String domain, ConcurrentHashMap<String, ConfigBeanDetail<?>> map)
 						throws PersistenceException {
 					// TODO Auto-generated method stub
 					

@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.yuwnloy.disconman.MBeanDetail;
+import com.yuwnloy.disconman.ConfigBeanDetail;
 import com.yuwnloy.disconman.exceptions.PersistenceException;
 /**
  * 
@@ -21,7 +21,7 @@ public interface IPersistence extends Serializable{
    * @return
    */
   public ConcurrentHashMap<String,ConcurrentHashMap<String, Object>> getProperties() throws PersistenceException;
-  public void storeProperties(String domain, ConcurrentHashMap<String, MBeanDetail<?>> map) throws PersistenceException;
+  public void storeProperties(String domain, ConcurrentHashMap<String, ConfigBeanDetail<?>> map) throws PersistenceException;
   /**
    * Get one property based mbeanName
    * @param mbeanName

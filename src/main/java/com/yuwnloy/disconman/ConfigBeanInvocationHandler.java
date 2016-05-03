@@ -30,8 +30,8 @@ import com.yuwnloy.disconman.persistences.IPersistence;
  *
  * @date Apr 14, 2016
  */
-public class MBeanInvocationHandler<T> implements InvocationHandler {
-	private static Logger s_logger = LoggerFactory.getLogger(MBeanInvocationHandler.class);
+public class ConfigBeanInvocationHandler<T> implements InvocationHandler {
+	private static Logger s_logger = LoggerFactory.getLogger(ConfigBeanInvocationHandler.class);
 
 	private interface MethodInvocationHandler {
 		public Object invoke(Object[] args) throws IllegalArgumentException, IllegalAccessException,
@@ -59,7 +59,7 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 	// loaded
 	private static final Object s_cacheReentrancyMonitor = new Object();
 	// The actual cache for ALL mbeans
-	public static final ConcurrentHashMap<String, MBeanDetail<?>> m_allAttList = new ConcurrentHashMap<String, MBeanDetail<?>>();
+	public static final ConcurrentHashMap<String, ConfigBeanDetail<?>> m_allAttList = new ConcurrentHashMap<String, ConfigBeanDetail<?>>();
 
 	private Map<Method, MethodInvocationHandler> m_methodHandlers;
 
@@ -71,7 +71,7 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 	 *            : The implementation
 	 * @throws NoSuchMethodException
 	 */
-	public MBeanInvocationHandler(MBeanDetail<T> detail) throws NoSuchMethodException, PersistenceException {
+	public ConfigBeanInvocationHandler(ConfigBeanDetail<T> detail) throws NoSuchMethodException, PersistenceException {
 
 		if (detail == null) {
 			s_logger.warn("detail is null. return null.");
@@ -511,7 +511,7 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 					} else {
 						// MBeanDetail(Class<T> intf,Object implement,ObjectName
 						// objName,String desc)
-						MBeanDetail<?> detail = new MBeanDetail(null, null, null, null,null);
+						ConfigBeanDetail<?> detail = new ConfigBeanDetail(null, null, null, null,null);
 						detail.setAttMap(attMap);
 						m_allAttList.put(key, detail);
 					}

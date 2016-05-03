@@ -12,7 +12,7 @@ import com.yuwnloy.disconman.persistences.PersistenceFactory;
  *
  * @date Apr 14, 2016
  */
-public class MBeanDetail<T> {
+public class ConfigBeanDetail<T> {
   private ObjectName objName = null;
   private String description = "";
   private Class<T> intf = null;
@@ -20,7 +20,7 @@ public class MBeanDetail<T> {
   private ConcurrentHashMap<String,Object> attMap = new ConcurrentHashMap<String,Object>();
   private ConcurrentHashMap<String,AttributeDetail> attDetailMap = new ConcurrentHashMap<String,AttributeDetail>();
   private IPersistence persistence;
-  public MBeanDetail(Class<T> intf,Object implement,ObjectName objName,String desc, IPersistence persistence) {
+  public ConfigBeanDetail(Class<T> intf,Object implement,ObjectName objName,String desc, IPersistence persistence) {
     this.objName = objName;
     this.description = desc;
     this.intf = intf;

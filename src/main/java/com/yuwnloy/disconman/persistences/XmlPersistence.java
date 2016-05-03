@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.yuwnloy.disconman.MBeanDetail;
+import com.yuwnloy.disconman.ConfigBeanDetail;
 import com.yuwnloy.disconman.exceptions.PersistenceException;
 
 
@@ -205,7 +205,7 @@ public class XmlPersistence implements IPersistence, Serializable {
 
 	}
 	@Override
-	public void storeProperties(String domain, ConcurrentHashMap<String, MBeanDetail<?>> map)
+	public void storeProperties(String domain, ConcurrentHashMap<String, ConfigBeanDetail<?>> map)
 			throws PersistenceException {
 		Collection<XmlConfiguration> configList = new ArrayList<XmlConfiguration>();
 		for(String key : map.keySet()){
