@@ -8,9 +8,10 @@ import java.lang.annotation.Target;
 /**
  * Annotation to set the default value of a mbean attribute of type
  * int or Integer.
- * @author xiaoguang
+ * 
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Sep 22, 2015
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

@@ -3,11 +3,12 @@ package com.yuwnloy.disconman;
 import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 /**
  * 
- * @author xiaoguang
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Apr 14, 2016
  */
 public class ThreadExecuteQueue {
         private final static String CLASS_NAME = ThreadExecuteQueue.class.getName();

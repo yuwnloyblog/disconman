@@ -3,15 +3,13 @@ package com.yuwnloy.disconman;
 import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Proxy;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 import javax.management.DynamicMBean;
 import javax.management.InstanceNotFoundException;
 import javax.management.MBeanRegistrationException;
@@ -20,52 +18,93 @@ import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
-
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.yuwnloy.disconman.annotations.Description;
 import com.yuwnloy.disconman.annotations.Domain;
 import com.yuwnloy.disconman.annotations.Name;
 import com.yuwnloy.disconman.exceptions.PersistenceException;
+import com.yuwnloy.disconman.persistences.IPersistence;
+import com.yuwnloy.disconman.persistences.PersistenceFactory;
 import com.yuwnloy.disconman.persistences.XmlPersistence;
-import com.yuwnloy.disconman.IPersistence;
-import com.yuwnloy.disconman.MBeanDetail;
-import com.yuwnloy.disconman.MBeanInvocationHandler;
-import com.yuwnloy.disconman.PersistenceFactory;
-import com.yuwnloy.disconman.StandardMBeanWithAnnotations;
 
 /**
  * 
- * @author xiaoguang
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Apr 14, 2016
  */
 public class ConfigManager {
-	private static boolean isValid = false;
-	private static String defaultDomain = "ConfigurationFramework";
-	/** For logging, Store the CLASS_NAME */
-	private final static String CLASS_NAME = ConfigManager.class.getName();
-	private static final Logger s_logger = Logger.getLogger(CLASS_NAME);
-	private static ConfigManager s_instance = null;
-	private Map<Class, Map<ObjectName, Object>> m_mbeanImplementations = new ConcurrentHashMap<Class, Map<ObjectName, Object>>();
-	private MBeanServer m_mbeanServer;
-	public static IPersistence defaultPersistence = null;
-	public enum Type {
-		CONFIGURATION, STATISTICS, MONITORING
-	}
-
-	public static void setDomain(String domain) {
-		final String loggerMethodName = "setDomain";
-		s_logger.logp(Level.FINEST, CLASS_NAME, loggerMethodName, "ToDo: set defaultDomain with domain = " + domain);
-		defaultDomain = domain;
-		s_logger.logp(Level.FINEST, CLASS_NAME, loggerMethodName, "Done: set defaultDomain = " + defaultDomain);
-	}
-
+	public final static String defaultDomain = "DefaultDomain";
+	public final static String defaultFileName = "config.properties";
+	public final static PersistenceFactory.PersistenceType defaultPersistenceType = PersistenceFactory.PersistenceType.Properties;
 	
+	
+	private final static Logger s_logger = LoggerFactory.getLogger(ConfigManager.class);
+	private String currentDomain = defaultDomain;
+	private static ConfigManager s_instance = null;
+	
+	private Map<Class<?>, Map<ObjectName, Object>> m_mbeanImplementations = new ConcurrentHashMap<Class<?>, Map<ObjectName, Object>>();
+	private MBeanServer m_mbeanServer = null;
+	public IPersistence defaultPersistence = null;
+//	private PersistenceFactory.PersistenceType persistenceType = PersistenceFactory.PersistenceType.Properties;
+//	private String filePath = "config.properties";
+	
+	public static void create(){
+		if(s_instance==null)
+			init(null,null);
+	}
+	public static void create(String domain, PersistenceFactory.PersistenceType persistenceType,String fileName){
+		if(PersistenceFactory.PersistenceType.XML.equals(persistenceType)||PersistenceFactory.PersistenceType.Properties.equals(persistenceType)){
+			//validate the file.
+			File file = new File(fileName);
+			if(file.exists()){
+				if(file.isDirectory()){
+					String ext = "properties";
+					if(PersistenceFactory.PersistenceType.XML.equals(persistenceType))
+						ext = "xml";
+					fileName = fileName+File.separator+"config."+ext;
+				}
+			}
+		}
+		if(s_instance==null){
+			init(persistenceType, fileName);
+		}
+	}
 
 	private ConfigManager() {
-		super();
+		this(null,null,null);
+	}
+	
+	private ConfigManager(String mbeanserNamePath){
+		this(mbeanserNamePath,null,null);
+	}
+	
+	private ConfigManager(String mbeanserNamePath,PersistenceFactory.PersistenceType persistenceType,String fileName){
+		if(mbeanserNamePath!=null){
+			try {
+				InitialContext ctx = new InitialContext();
+				m_mbeanServer = MBeanServer.class.cast(ctx.lookup(mbeanserNamePath));
+				s_logger.info("Found WLS runtime MBeanServer");
+			} catch (NamingException e) {
+				m_mbeanServer = ManagementFactory.getPlatformMBeanServer();
+			}
+		}else{
+			m_mbeanServer = ManagementFactory.getPlatformMBeanServer();
+		}
+		PersistenceFactory.PersistenceType perType = ConfigManager.defaultPersistenceType;
+		if(persistenceType!=null){
+			perType = persistenceType;
+		}
+		String filePath = "config.properties";
+		if(fileName!=null){
+			filePath = fileName;
+		}
+		this.initPersistenceFile(perType, filePath);
 	}
 
 	/**
@@ -76,51 +115,24 @@ public class ConfigManager {
 		String desc = "";
 		String domain = "";
 	}
-
 	/**
 	 * Init MBeanManager with XML file or directory path contains XML file
 	 * 
 	 * @param xmlFile
 	 */
-	public static void init(File xmlFile) {
-		final String loggerMethodName = "init(File xmlFile)";
+	private void initPersistenceFile(PersistenceFactory.PersistenceType persistenceType,String filePath) {
 		try {
-			String realPath = "";
-			String xmlFileNameNoExt = "configure";
-			PersistenceFactory.PersistenceType perType = null;
-			if (xmlFile.getName().endsWith(".xml")) {// file
-				String absolutePath = xmlFile.getAbsolutePath();
-				String xmlFileName = absolutePath.substring(absolutePath.lastIndexOf(File.separator) + 1);
-				realPath = absolutePath;
-				xmlFileNameNoExt = xmlFileName.substring(0, xmlFileName.length() - 4);
-				perType = PersistenceFactory.PersistenceType.XML;
+			if(PersistenceFactory.PersistenceType.XML.equals(persistenceType)){//xml
+				defaultPersistence = PersistenceFactory.getPersistenceInstance(persistenceType,filePath);
+			}else if(PersistenceFactory.PersistenceType.Properties.equals(persistenceType)){//properties file
+				defaultPersistence = PersistenceFactory.getPersistenceInstance(persistenceType,filePath);
+			}else if(PersistenceFactory.PersistenceType.DB.equals(persistenceType)){//db
 				
-			} else if(xmlFile.getName().endsWith(".properties")){//properties file
-				String absolutePath = xmlFile.getAbsolutePath();
-				String xmlFileName = absolutePath.substring(absolutePath.lastIndexOf(File.separator) + 1);
-				realPath = absolutePath;
-				xmlFileNameNoExt = xmlFileName.substring(0, xmlFileName.length() - 11);
-				perType = PersistenceFactory.PersistenceType.Properties;
-			} else {// the directory stored the config.xml
-				if (xmlFile.exists() || xmlFile.isDirectory()) {
-					String xmlFileName = xmlFileNameNoExt + ".xml";
-					realPath = xmlFile.getAbsolutePath() + File.separator + xmlFileName;
-					perType = PersistenceFactory.PersistenceType.XML;
-				} else {// the directory didn't exist!
-					s_logger.logp(Level.WARNING, CLASS_NAME, loggerMethodName,
-							"The directory not exist:" + xmlFile.getAbsolutePath());
-					return;
-				}
 			}
-			defaultPersistence = PersistenceFactory.getPersistenceInstance(perType);
-			XmlPersistence.init(realPath, xmlFileNameNoExt,perType);
-			isValid = true;
 		} catch (RuntimeException e) {
-			s_logger.logp(Level.SEVERE, CLASS_NAME, loggerMethodName,
-					"initiate the MBeanManager instance failed with error: [" + e.getMessage() + "]", e);
+			s_logger.error("initiate the MBeanManager instance failed with error: [" + e.getMessage() + "]", e);
 			throw new RuntimeException(e);
-		} 
-		s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "End to init xmlFile");
+		}
 	}
 
 	/**
@@ -133,8 +145,6 @@ public class ConfigManager {
 		getInstance().unregisterMBeans();
 		//
 		// configMBean = null;
-		isValid = false;
-		defaultDomain = "ConfigurationFramework";
 		s_instance = null;
 	}
 
@@ -145,32 +155,19 @@ public class ConfigManager {
 	 *             : if jndi data source validating faile in init(), MBean
 	 *             service will not return a instance and throws this exception
 	 */
-	public static synchronized ConfigManager getInstance() {
-		if (isValid) {
-			if (s_instance == null) {
-				s_instance = new ConfigManager();
-			}
-			return s_instance;
-		} else {
-			throw new RuntimeException("the Persistence source is not correctly configured.");
+	public static ConfigManager getInstance() {
+		if (s_instance == null) {
+			throw new RuntimeException("Please call ConfigManager.create() before get the instance.");
 		}
+		return s_instance;
+	}
+	
+	private static synchronized void init(PersistenceFactory.PersistenceType persistenceType,String fileName){
+		if(s_instance==null)
+			s_instance = new ConfigManager(null, persistenceType, fileName);
 	}
 
-	/**
-	 * Get the MBeanServer used to register OPC MBeans
-	 */
-	public synchronized MBeanServer getMBeanServer() {
-		if (m_mbeanServer == null) {
-			try {
-				InitialContext ctx = new InitialContext();
-				m_mbeanServer = MBeanServer.class.cast(ctx.lookup("java:comp/env/jmx/runtime"));
-				s_logger.log(Level.FINE, "Found WLS runtime MBeanServer");
-			} catch (NamingException e) {
-				m_mbeanServer = ManagementFactory.getPlatformMBeanServer();
-			}
-		}
-		return m_mbeanServer;
-	}
+	
 
 	/**
 	 * Register an MBean with given interface with only 1 parameter
@@ -183,9 +180,6 @@ public class ConfigManager {
 	 */
 	public <T> DynamicMBean createMBean(Class<T> intf)
 			throws NotCompliantMBeanException, NoSuchMethodException, Exception {
-		final String loggerMethodName = "createMBean(Class<T> intf)";
-		s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName,
-				"Begin and End to createMBean with Class intf before return...");
 		return createMBean(intf, null);
 	}
 
@@ -203,15 +197,8 @@ public class ConfigManager {
 	 */
 	public <T> DynamicMBean createMBean(Class<T> intf, Object impl)
 			throws NotCompliantMBeanException, NoSuchMethodException, Exception {
-		final String loggerMethodName = "createMBean(Class<T> intf, Object impl)";
-		s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "Begin to createMBean with intf and impl");
-		s_logger.logp(Level.FINEST, CLASS_NAME, loggerMethodName, "TODO: createMBean with intf and impl");
 		String desc = this.getDesc(intf, impl);
-		s_logger.logp(Level.FINEST, CLASS_NAME, loggerMethodName, "get intf description = " + desc);
 		ObjectName objName = getObjectName(intf, impl);
-		s_logger.logp(Level.FINEST, CLASS_NAME, loggerMethodName, "get intf objName");
-		s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName,
-				"End to createMBean with intf, impl, objName, desc before return...");
 		return createMBean(intf, impl, objName, desc);
 	}
 
@@ -272,10 +259,8 @@ public class ConfigManager {
 	public <T> DynamicMBean createMBean(Class<T> intf, Object impl, ObjectName objName, String description)
 			throws NotCompliantMBeanException, NoSuchMethodException, Exception {
 		// StandardMBean mbean = createMBean(intf, impl, description);
-		// Class<?> intf,Object implement,ObjectName objName,String desc
-		final String loggerMethodName = "createMBean(Class<T> intf, Object impl, ObjectName objName, String description)";
 		
-		MBeanDetail<T> detail = new MBeanDetail<T>(intf, impl, objName, description);
+		MBeanDetail<T> detail = new MBeanDetail<T>(intf, impl, objName, description, this.defaultPersistence);
 		T proxy = generateProxy(detail);
 		StandardMBean mbean = new StandardMBeanWithAnnotations(proxy, intf, description);
 		registerMBean(mbean, objName, intf);
@@ -371,7 +356,7 @@ public class ConfigManager {
 	 *            : the implement of MBean interface
 	 * @return
 	 */
-	public ObjectName getObjectName(Class intf, Object impl) {
+	public ObjectName getObjectName(Class<?> intf, Object impl) {
 		String name = "";
 		String domain = "";
 		MBeanInfo mbinfo = new MBeanInfo();
@@ -385,7 +370,7 @@ public class ConfigManager {
 		domain = (impl == null || domain.equalsIgnoreCase("")) ? mbinfo.domain : domain;
 
 		if (domain == null || domain.trim().equals("")) {
-			domain = defaultDomain;
+			domain = currentDomain;
 		}
 		// add identity into domain
 		// domain = configMBean.getGroupIdentity() + domain;
@@ -395,7 +380,7 @@ public class ConfigManager {
 		try {
 			objName = new ObjectName(name);
 		} catch (MalformedObjectNameException e) {
-			s_logger.warning(e.toString());
+			s_logger.warn(e.toString());
 		}
 		return objName;
 	}
@@ -404,18 +389,17 @@ public class ConfigManager {
 	 * unregister all mbeans from MBean server
 	 */
 	public void unregisterMBeans() {
-		final MBeanServer mbs = getMBeanServer();
 
-		for (Class intf : m_mbeanImplementations.keySet()) {
+		for (Class<?> intf : m_mbeanImplementations.keySet()) {
 			Map<ObjectName, Object> map = m_mbeanImplementations.get(intf);
 
 			for (ObjectName on : map.keySet()) {
 				try {
-					mbs.unregisterMBean(on);
+					this.m_mbeanServer.unregisterMBean(on);
 				} catch (InstanceNotFoundException e) {
-					s_logger.warning(e.toString());
+					s_logger.warn(e.toString());
 				} catch (MBeanRegistrationException e) {
-					s_logger.warning(e.toString());
+					s_logger.warn(e.toString());
 				}
 			}
 		}
@@ -429,7 +413,7 @@ public class ConfigManager {
 	 *            : MBean interface
 	 * @return
 	 */
-	public boolean isRegistered(Class intf) {
+	public boolean isRegistered(Class<?> intf) {
 		ObjectName objname = getObjectName(intf, null);
 		return this.isRegistered(objname);
 	}
@@ -444,7 +428,7 @@ public class ConfigManager {
 	 *            : the implement of MBean interface
 	 * @return
 	 */
-	public boolean isRegistered(Class intf, Object impl) {
+	public boolean isRegistered(Class<?> intf, Object impl) {
 		ObjectName objname = getObjectName(intf, impl);
 		return this.isRegistered(objname);
 	}
@@ -458,8 +442,7 @@ public class ConfigManager {
 	 */
 	public boolean isRegistered(ObjectName objName) {
 		boolean result = false;
-		final MBeanServer mbs = getMBeanServer();
-		result = mbs.isRegistered(objName);
+		result = this.m_mbeanServer.isRegistered(objName);
 		return result;
 	}
 
@@ -470,7 +453,7 @@ public class ConfigManager {
 	 * @param intf
 	 *            : MBean interface
 	 */
-	public void unregisterMBean(Class intf) {
+	public void unregisterMBean(Class<?> intf) {
 		ObjectName objname = getObjectName(intf, null);
 		unregisterMBean(objname);
 	}
@@ -485,7 +468,7 @@ public class ConfigManager {
 	 * @param impl
 	 *            : the implement of MBean interface
 	 */
-	public void unregisterMBean(Class intf, Object impl) {
+	public void unregisterMBean(Class<?> intf, Object impl) {
 		ObjectName objname = getObjectName(intf, impl);
 		unregisterMBean(objname);
 	}
@@ -498,12 +481,11 @@ public class ConfigManager {
 	 *            from MBean Server
 	 */
 	public void unregisterMBean(ObjectName objectName) {
-		final MBeanServer mbs = getMBeanServer();
 		try {
 			// ObjectName objectName = new ObjectName(name);
-			mbs.unregisterMBean(objectName);
+			this.m_mbeanServer.unregisterMBean(objectName);
 			// remove it from local cache
-			for (Class intf : m_mbeanImplementations.keySet()) {
+			for (Class<?> intf : m_mbeanImplementations.keySet()) {
 				Map<ObjectName, Object> map = m_mbeanImplementations.get(intf);
 				if (map.containsKey(objectName)) {
 					map.remove(objectName);
@@ -511,9 +493,9 @@ public class ConfigManager {
 				}
 			}
 		} catch (MBeanRegistrationException e) {
-			s_logger.warning(e.toString());
+			s_logger.warn(e.toString());
 		} catch (InstanceNotFoundException e) {
-			s_logger.warning(e.toString());
+			s_logger.warn(e.toString());
 		}
 	}
 
@@ -524,7 +506,7 @@ public class ConfigManager {
 	 */
 	public void unregisterMBeans(String domain) {
 		List<ObjectName> objNameList = new ArrayList<ObjectName>();
-		for (Class intf : m_mbeanImplementations.keySet()) {
+		for (Class<?> intf : m_mbeanImplementations.keySet()) {
 			Map<ObjectName, Object> map = m_mbeanImplementations.get(intf);
 			for (ObjectName on : map.keySet()) {
 				if (on.getDomain().equalsIgnoreCase(domain)) {
@@ -549,14 +531,7 @@ public class ConfigManager {
 	 */
 	private <T> T generateProxy(MBeanDetail<T> detail)
 			throws IllegalArgumentException, NoSuchMethodException, PersistenceException {
-		// Class<T> intf, Object impl, ObjectName objName
-		final String loggerMethodName = "generateProxy(MBeanDetail<T> detail)";
-		s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "Begin to generateProxy");
-		s_logger.logp(Level.FINEST, CLASS_NAME, loggerMethodName, "get intf from MBeanDetail");
 		Class<T> intf = detail.getIntf();
-		s_logger.logp(Level.FINEST, CLASS_NAME, loggerMethodName, "Try to Proxy.newProxyInstance for intf");
-		s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName,
-				"End to generateProxy And before Try to new MBeanInvocationHandler() return...");
 		return intf.cast(Proxy.newProxyInstance(intf.getClassLoader(), new Class[] { intf },
 				new MBeanInvocationHandler<T>(detail)));
 	}
@@ -567,7 +542,7 @@ public class ConfigManager {
 	 * @param cls
 	 *            : MBean interface or implement
 	 */
-	private MBeanInfo getMBeanInfo(Class cls) {
+	private MBeanInfo getMBeanInfo(Class<?> cls) {
 		String name = "";
 		String desc = "";
 		;
@@ -575,7 +550,8 @@ public class ConfigManager {
 		MBeanInfo mbinfo = new MBeanInfo();
 
 		if (cls == null) {
-			s_logger.log(Level.SEVERE, "Interface or Implement is null, throws NullPointerException! ");
+			s_logger.error("Interface or Implement is null, throws NullPointerException!");
+			throw new NullPointerException("Interface or Implement is null, throws NullPointerException!");
 		}
 		try {
 			name = ((Name) cls.getAnnotation(Name.class)).value();
@@ -607,17 +583,16 @@ public class ConfigManager {
 	 * @param objName
 	 *            : object name of this mbean
 	 */
-	private synchronized void registerMBean(StandardMBean mbean, ObjectName objName, Class<?> intf) throws Exception {
+	private void registerMBean(StandardMBean mbean, ObjectName objName, Class<?> intf) throws Exception {
 		if (objName == null) {
-			s_logger.warning("MBean has no name.");
+			s_logger.warn("MBean has no name.");
 			return;
 		}
 		if (isRegistered(objName)) {
 			unregisterMBean(objName);
 		}
-		MBeanServer mbs = getMBeanServer();
 		// ObjectName objName = new ObjectName(name);
-		mbs.registerMBean(mbean, objName);
+		this.m_mbeanServer.registerMBean(mbean, objName);
 
 		if (m_mbeanImplementations.containsKey(intf)) {
 			Map<ObjectName, Object> map = m_mbeanImplementations.get(intf);
@@ -629,26 +604,7 @@ public class ConfigManager {
 		}
 	}
 
-	private void clearMbeanProperties(String objectName) {
-
-		try {
-			/*
-			 * DbProperties dbProperties = DbProperties.getDbProperties();
-			 * dbProperties.clearMBeanProperties(objectName);
-			 */
-			// MBeanInvocationHandler handler = new
-			// MBeanInvocationHandler(null,null);
-
-			// handler.CompellentRefreshCache(dbProperties);
-			MBeanInvocationHandler.Clear();
-		} catch (Exception e) {
-			s_logger.log(Level.SEVERE, "can not clear the mbean properties.");
-		}
-	}
-
 	public void removeMBean(String objectName) {
-		final String loggerMethodName = "removeMBean";
-		s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "Begin to removeMBean");
 		if (objectName == null || objectName.equals("")) {
 			return;
 		}
@@ -657,11 +613,10 @@ public class ConfigManager {
 		try {
 			objName = new ObjectName(objectName);
 		} catch (MalformedObjectNameException e) {
-			s_logger.warning(e.toString());
+			s_logger.warn(e.toString());
 		}
 		if (objName != null) {
 			unregisterMBean(objName);
 		}
-		s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "End to removeMBean");
 	}
 }

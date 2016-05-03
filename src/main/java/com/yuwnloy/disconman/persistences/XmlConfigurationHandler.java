@@ -1,6 +1,4 @@
 package com.yuwnloy.disconman.persistences;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -8,11 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-
 import java.net.URL;
-
-import java.text.SimpleDateFormat;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -43,7 +37,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
 import org.xml.sax.ErrorHandler;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -52,9 +45,9 @@ import org.xml.sax.XMLReader;
 
 /**
  * 
- * @author xiaoguang
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Apr 14, 2016
  */
 public class XmlConfigurationHandler implements IConfigurationHandler{
   private final static String CLASS_NAME = XmlConfigurationHandler.class.getName();    
@@ -185,7 +178,6 @@ public class XmlConfigurationHandler implements IConfigurationHandler{
    * @return
    */
   private List<XmlConfiguration> parseDocument(Document doc) {
-    final String loggerMethodName = "parseDocument";
     
     List<XmlConfiguration> configList = new ArrayList<XmlConfiguration>();
     Element root = doc.getDocumentElement();
@@ -216,7 +208,6 @@ public class XmlConfigurationHandler implements IConfigurationHandler{
    * @return a {@link XmlConfiguration}
    */
   private XmlConfiguration parseSection(Node sectionNode) {
-    final String loggerMethodName = "parseSection";   
     
     XmlConfiguration config = new XmlConfiguration();
     //set the domain
@@ -290,8 +281,7 @@ public class XmlConfigurationHandler implements IConfigurationHandler{
    * @param attName
    * @return
    */
-  private String getAttributeValue(Node node, String attName) {
-      final String loggerMethodName = "getAttributeValue";     
+  private String getAttributeValue(Node node, String attName) {   
     String ret = null;
     if (node != null) {
       NamedNodeMap attMap = node.getAttributes();

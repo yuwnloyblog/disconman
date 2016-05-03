@@ -3,9 +3,9 @@ package com.yuwnloy.disconman.persistences;
 import java.util.concurrent.ConcurrentHashMap;
 /**
  * 
- * @author xiaoguang
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Apr 14, 2016
  */
 public class XmlConfiguration {
   private String domain = "";

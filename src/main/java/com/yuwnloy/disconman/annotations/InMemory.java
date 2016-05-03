@@ -7,9 +7,10 @@ import java.lang.annotation.ElementType;
 
 /**
  * Annotation to indicate that a value is only stored in memory 
- * @author xiaoguang
+ * 
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Sep 22, 2015
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

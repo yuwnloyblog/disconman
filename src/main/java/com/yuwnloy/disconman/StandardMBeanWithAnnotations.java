@@ -5,7 +5,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -26,13 +25,12 @@ import com.yuwnloy.disconman.annotations.Invisible;
 import com.yuwnloy.disconman.annotations.Name;
 import com.yuwnloy.disconman.annotations.Description;
 
-
 /**
  * Extend the StandardMBean to customise the generated info based on the following annotations:
  *
- * @author xiaoguang
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Apr 14, 2016
  */
 public class StandardMBeanWithAnnotations extends StandardMBean {
   private static final String CLASS_NAME = StandardMBeanWithAnnotations.class.getName();

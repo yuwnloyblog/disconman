@@ -5,9 +5,9 @@ package com.yuwnloy.disconman.exceptions;
  * a special log filtering is put in effect and whoever catches this exception must log 
  * only in FINEST, as the log has already been taken care of earlier on.
  * 
- * @author xiaoguang
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Sep 22, 2015
  */
 public class DbConnectionException extends PersistenceException {
 

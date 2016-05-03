@@ -1,22 +1,27 @@
-package com.yuwnloy.disconman;
+package com.yuwnloy.disconman.persistences;
 
 import java.io.Serializable;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.yuwnloy.disconman.MBeanDetail;
 import com.yuwnloy.disconman.exceptions.PersistenceException;
-import com.yuwnloy.disconman.persistences.AttributeDetail;
-
+/**
+ * 
+ * @author xiaoguang.gao
+ *
+ * @date Apr 14, 2016
+ */
 public interface IPersistence extends Serializable{
   /**
    * Get all the mbeans' properties
    * @param domainName
-   *  hhtan added for mbean defaultvalue
+   *  
    * @param isOldDB,verified if the db is upgraded accordingly.
    * @return
    */
   public ConcurrentHashMap<String,ConcurrentHashMap<String, Object>> getProperties() throws PersistenceException;
-
+  public void storeProperties(String domain, ConcurrentHashMap<String, MBeanDetail<?>> map) throws PersistenceException;
   /**
    * Get one property based mbeanName
    * @param mbeanName
@@ -30,7 +35,7 @@ public interface IPersistence extends Serializable{
    * @param mbeanName
    * @param propertyName
    * @param value
-   * hhtan added for mbean defaultvalue
+   * 
    * @param isOldDB ,verified if the db is upgraded accordingly.
    */
   public void setProperty(String mbeanName, String propertyName, Object value, AttributeDetail attDetail) throws PersistenceException;

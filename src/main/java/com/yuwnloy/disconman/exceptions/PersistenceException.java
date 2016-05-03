@@ -1,6 +1,9 @@
 package com.yuwnloy.disconman.exceptions;
 /**
  * 
+ * @author xiaoguang.gao
+ *
+ * @date Apr 14, 2016
  */
 public class PersistenceException extends Exception{
 

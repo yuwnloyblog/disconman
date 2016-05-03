@@ -13,9 +13,9 @@ import java.lang.annotation.Target;
  * Internal attributes and operations should only be used by dev and hidden (not documented)
  * to customers.
  * 
- * @author xiaoguang
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Sep 22, 2015
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

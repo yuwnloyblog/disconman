@@ -13,11 +13,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * 
  * @author xiaoguang.gao
  *
- * @date 2016年1月29日 下午5:12:37
- **/
+ * @date Apr 14, 2016
+ */
 public class PropertiesConfigurationHandler implements IConfigurationHandler{
 	private final static String CLASS_NAME = PropertiesConfigurationHandler.class.getName();    
 	private static Logger s_logger = Logger.getLogger(CLASS_NAME);

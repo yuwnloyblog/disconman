@@ -3,14 +3,13 @@ package com.yuwnloy.disconman.persistences;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
 
 /**
- *
+ * 
  * @author xiaoguang.gao
  *
- * @date 2016年2月1日 上午11:18:35
- **/
+ * @date Apr 14, 2016
+ */
 public interface IConfigurationHandler {
 	public Collection<XmlConfiguration> parseFile(File xmlFile);
 

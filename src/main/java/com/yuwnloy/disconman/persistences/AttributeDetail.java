@@ -1,11 +1,10 @@
 package com.yuwnloy.disconman.persistences;
 
-import com.yuwnloy.disconman.IPersistence;
-import com.yuwnloy.disconman.PersistenceFactory;
-
-/*
- *@author xiaoguang.gao@oracle.com
- *@version 2013-7-1 
+/**
+ * 
+ * @author xiaoguang.gao
+ *
+ * @date Apr 14, 2016
  */
 public class AttributeDetail {
 	private String description = "";
@@ -14,7 +13,7 @@ public class AttributeDetail {
 	private Object value;
 	private Object defaultValue;
 	
-	private IPersistence persistence = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.Memory);
+	private IPersistence persistence = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.Memory,null);
 	//private Class<? extends CustomPropertyValidator> validatorClass = null;
 	
 	

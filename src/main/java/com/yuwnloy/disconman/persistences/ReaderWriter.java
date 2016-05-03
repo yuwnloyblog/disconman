@@ -1,6 +1,5 @@
 package com.yuwnloy.disconman.persistences;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -9,14 +8,14 @@ import java.io.OutputStreamWriter;
 import java.util.List;
 
 /**
- *
+ * 
  * @author xiaoguang.gao
  *
- * @date 2016年2月1日 上午10:54:17
- **/
+ * @date Apr 14, 2016
+ */
 public class ReaderWriter {
 	/**
-	 * write one line by on line
+	 * write one line
 	 * @param propFile
 	 * @param valueList
 	 */
@@ -30,7 +29,7 @@ public class ReaderWriter {
 				 
 				// fw=new FileWriter(propFile);
 				// writer = new BufferedWriter(fw);
-				 for(String value : valueList){System.out.println(value);
+				 for(String value : valueList){
 					 writer.write(value+"\r\n");
 				 }
 				 writer.flush();

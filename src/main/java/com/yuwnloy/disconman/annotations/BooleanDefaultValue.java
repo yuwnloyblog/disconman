@@ -9,14 +9,13 @@ import java.lang.annotation.Target;
  * Annotation to set the default value of a mbean attribute of type
  * boolean or Boolean 
  * 
- * @author xiaoguang
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Sep 22, 2015
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface BooleanDefaultValue {
   boolean value();
-   //tanh added for defaultvalue;
   int version() default 0;
 }

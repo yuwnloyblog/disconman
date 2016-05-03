@@ -1,13 +1,16 @@
 package com.yuwnloy.disconman;
 import java.util.concurrent.ConcurrentHashMap;
+
 import javax.management.ObjectName;
 
 import com.yuwnloy.disconman.persistences.AttributeDetail;
+import com.yuwnloy.disconman.persistences.IPersistence;
+import com.yuwnloy.disconman.persistences.PersistenceFactory;
 /**
  * 
- * @author xiaoguang
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Apr 14, 2016
  */
 public class MBeanDetail<T> {
   private ObjectName objName = null;
@@ -16,12 +19,16 @@ public class MBeanDetail<T> {
   private Object implement = null;
   private ConcurrentHashMap<String,Object> attMap = new ConcurrentHashMap<String,Object>();
   private ConcurrentHashMap<String,AttributeDetail> attDetailMap = new ConcurrentHashMap<String,AttributeDetail>();
-	
-  public MBeanDetail(Class<T> intf,Object implement,ObjectName objName,String desc) {
+  private IPersistence persistence;
+  public MBeanDetail(Class<T> intf,Object implement,ObjectName objName,String desc, IPersistence persistence) {
     this.objName = objName;
     this.description = desc;
     this.intf = intf;
     this.implement = implement;
+    if(persistence!=null)
+    	this.persistence = persistence;
+    else
+    	this.persistence = PersistenceFactory.getPersistenceInstance(ConfigManager.defaultPersistenceType, ConfigManager.defaultFileName);
   }
 	
   public ObjectName getObjName() {
@@ -70,6 +77,14 @@ public class MBeanDetail<T> {
 
   public void setAttDetailMap(ConcurrentHashMap<String, AttributeDetail> attDetailMap) {
 	this.attDetailMap = attDetailMap;
-  }	
+  }
+
+public IPersistence getPersistence() {
+	return persistence;
+}
+
+public void setPersistence(IPersistence persistence) {
+	this.persistence = persistence;
+}	
 	
 }

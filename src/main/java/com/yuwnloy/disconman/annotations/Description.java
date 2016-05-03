@@ -7,9 +7,9 @@ import java.lang.annotation.Target;
 /**
  * Annotation to set the description of a mbean attribute or method
  * 
- * @author xiaoguang
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Sep 22, 2015
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD, ElementType.PARAMETER, ElementType.TYPE})

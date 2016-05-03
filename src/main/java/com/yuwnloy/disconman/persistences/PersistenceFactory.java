@@ -1,33 +1,35 @@
-package com.yuwnloy.disconman;
+package com.yuwnloy.disconman.persistences;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.management.Attribute;
-
+import com.yuwnloy.disconman.MBeanDetail;
 import com.yuwnloy.disconman.exceptions.PersistenceException;
-import com.yuwnloy.disconman.persistences.AttributeDetail;
-import com.yuwnloy.disconman.persistences.XmlPersistence;
 /**
  * 
- * @author xiaoguang
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Apr 14, 2016
  */
 public class PersistenceFactory {
 	public static enum PersistenceType{
 		Memory, DB, XML, Properties
 	}
 
-	public static IPersistence getPersistenceInstance(PersistenceType type) {
+	public static IPersistence getPersistenceInstance(PersistenceType type, String filePath) {
 		IPersistence persistence = null;
 		/*if (type == PersistenceType.DB) { //store in db
 			persistance = DbProperties.getDbProperties();
 		} else */
 		if (type == PersistenceType.XML) {   //store in xml
-			persistence = XmlPersistence.getInstance(PersistenceType.XML);
+			persistence = XmlPersistence.getInstance(PersistenceType.XML,filePath);
 		} else if(PersistenceType.Properties.equals(type)){
-			persistence = XmlPersistence.getInstance(PersistenceType.Properties);
+			persistence = XmlPersistence.getInstance(PersistenceType.Properties,filePath);
 		}else{   //store in memory
 			persistence = new IPersistence() {
+
+				/**
+				 * 
+				 */
+				private static final long serialVersionUID = 3592970423395913385L;
 
 				public ConcurrentHashMap<String,ConcurrentHashMap<String, Object>> getProperties() {
 					// TODO Auto-generated method stub
@@ -67,6 +69,13 @@ public class PersistenceFactory {
 				public void clearMBeanProperties(String ObjectName)
 				{
 
+				}
+
+				@Override
+				public void storeProperties(String domain, ConcurrentHashMap<String, MBeanDetail<?>> map)
+						throws PersistenceException {
+					// TODO Auto-generated method stub
+					
 				}     
 
 

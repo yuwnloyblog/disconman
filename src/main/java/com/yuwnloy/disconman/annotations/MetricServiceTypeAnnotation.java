@@ -10,9 +10,9 @@ import javax.management.DescriptorKey;
 /**
  * Annotation used to indicate an EM Metric
  *
- * @author xiaoguang
+ * @author xiaoguang.gao
  *
- * @date 2015��9��22��
+ * @date Sep 22, 2015
  */
 @Documented
 @Target(ElementType.TYPE)

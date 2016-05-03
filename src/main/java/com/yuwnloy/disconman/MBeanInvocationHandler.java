@@ -4,34 +4,34 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 import javax.management.InvalidAttributeValueException;
 
-import com.yuwnloy.disconman.ConfigManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.yuwnloy.disconman.annotations.BooleanDefaultValue;
 import com.yuwnloy.disconman.annotations.Description;
-import com.yuwnloy.disconman.annotations.InDB;
-import com.yuwnloy.disconman.annotations.InMemory;
-import com.yuwnloy.disconman.annotations.InXml;
 import com.yuwnloy.disconman.annotations.IntDefaultValue;
-import com.yuwnloy.disconman.annotations.Invisible;
 import com.yuwnloy.disconman.annotations.LongDefaultValue;
 import com.yuwnloy.disconman.annotations.MethodDefaultValue;
 import com.yuwnloy.disconman.annotations.StringDefaultValue;
-import com.yuwnloy.disconman.exceptions.DbConnectionException;
 import com.yuwnloy.disconman.exceptions.PersistenceException;
 import com.yuwnloy.disconman.persistences.AttributeDetail;
-
+import com.yuwnloy.disconman.persistences.IPersistence;
+/**
+ * 
+ * @author xiaoguang.gao
+ *
+ * @date Apr 14, 2016
+ */
 public class MBeanInvocationHandler<T> implements InvocationHandler {
-	private final static String CLASS_NAME = MBeanInvocationHandler.class.getName();
-	private static Logger s_logger = Logger.getLogger(CLASS_NAME);
+	private static Logger s_logger = LoggerFactory.getLogger(MBeanInvocationHandler.class);
 
 	private interface MethodInvocationHandler {
 		public Object invoke(Object[] args) throws IllegalArgumentException, IllegalAccessException,
@@ -63,7 +63,7 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 
 	private Map<Method, MethodInvocationHandler> m_methodHandlers;
 
-	private MBeanDetail<T> mbeanDetail = null;
+	//private MBeanDetail<T> mbeanDetail = null;
 
 	/**
 	 * 
@@ -72,17 +72,14 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 	 * @throws NoSuchMethodException
 	 */
 	public MBeanInvocationHandler(MBeanDetail<T> detail) throws NoSuchMethodException, PersistenceException {
-		final String loggerMethodName = "MBeanInvocationHandler";
-		s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName,
-				"Begin to MBeanInvocationHandler with MBeanDetail and ConfigurationMBean");
 
 		if (detail == null) {
-			s_logger.logp(Level.INFO, CLASS_NAME, loggerMethodName, "detail and configMBean are null. return null.");
+			s_logger.warn("detail is null. return null.");
 			return;
 		}
 		m_customImpl = detail.getImplement();
 		m_interface = detail.getIntf();
-		this.mbeanDetail = detail;
+		//this.mbeanDetail = detail;
 
 		m_methodHandlers = new HashMap<Method, MethodInvocationHandler>(m_interface.getMethods().length);
 		// m_methodHandlerTmpValue = new HashMap<String,
@@ -101,16 +98,14 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 			detail.setAttMap(m_allAttList.get(keyName).getAttMap());
 		}
 		m_allAttList.put(keyName, detail); // init the attlist map
-		IPersistence persistence = ConfigManager.defaultPersistence;
+		IPersistence persistence = detail.getPersistence();
 
 		try {
 			persistence.setMBeanDesc(keyName, detail.getDescription());
 		} catch (PersistenceException e) {
-			s_logger.logp(Level.WARNING, CLASS_NAME, loggerMethodName,
-					String.format("Store the description of mbean: %s in persistence datasource failed", keyName), e);
+			s_logger.warn(String.format("Store the description of mbean: %s in persistence datasource failed", keyName), e);
 		} catch (RuntimeException re) {
-			s_logger.logp(Level.WARNING, CLASS_NAME, loggerMethodName,
-					String.format("Encounter RuntimeException when store the description of mbean: %s.", keyName), re);
+			s_logger.warn(String.format("Encounter RuntimeException when store the description of mbean: %s.", keyName), re);
 		}
 		// }
 		for (Method method : m_interface.getMethods()) {
@@ -165,6 +160,7 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 								m_interface.getName(), method.toString()));
 			}
 		}
+		detail.getPersistence().storeProperties(jmxDomainName, m_allAttList);
 	}
 
 	/**
@@ -175,7 +171,6 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 	 * @return
 	 */
 	private AttributeHandler buildAttributeHandler(final Method method, String attributeName) {
-		final String loggerMethodName = "buildAttributeHandler";
 
 		final AttributeDetail attDetail = this.getAttDetail(method);
 		final String attName = attributeName;
@@ -193,7 +188,7 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 					@SuppressWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
 					public Object invoke(Object[] args) throws IllegalArgumentException, IllegalAccessException,
 							InvocationTargetException, InvalidAttributeValueException, InstantiationException {
-						Long now = new Date().getTime();
+						//Long now = new Date().getTime();
 						Object dbValue = null;
 						if (isCacheExpired(attDetail, m_properties)) {
 							// access to database and load all the
@@ -234,14 +229,12 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 			}
 
 			public MethodInvocationHandler getSetterHandler() {
-				s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName,
-						"Begin and End to new MethodInvocationHandler() for getSetterHandler to define invoke() and return...");
 				return new MethodInvocationHandler() {
 					public Object invoke(Object[] args) throws IllegalArgumentException, IllegalAccessException,
 							InvocationTargetException, InvalidAttributeValueException, InstantiationException {
 						ConcurrentHashMap<String, AttributeDetail> attDetailMap = m_allAttList.get(keyName)
 								.getAttDetailMap();
-						ConcurrentHashMap<String, Object> attMap = m_allAttList.get(keyName).getAttMap();
+						//ConcurrentHashMap<String, Object> attMap = m_allAttList.get(keyName).getAttMap();
 						Object value = args[0];
 						// persistent attribute,update the value
 						StoreAttributeWorker storeWorker = new StoreAttributeWorker(m_properties, keyName, attName,
@@ -283,13 +276,13 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 					Object[] avoidVarargsWarning = null;
 					value = (defaultMethod.invoke(m_customImpl, avoidVarargsWarning));
 				} catch (Exception e) {
-					s_logger.log(Level.SEVERE, "MBEAN:Exception encountered.", e);
+					s_logger.error("MBEAN:Exception encountered.", e);
 				}
 			}
 		}
 		if (value == null) { // not exist annotation, set default value
 								// according to data type
-			Class retType = method.getReturnType();
+			Class<?> retType = method.getReturnType();
 			if (retType == int.class) {
 				value = 0;
 			} else if (retType == boolean.class) {
@@ -322,7 +315,7 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 			if (aDesc != null)
 				detail.setDescription(aDesc.value());
 			// set the persistence way for attribute
-			detail.setPersistence(this.getPersistenceProperty(method));
+			//detail.setPersistence(this.getPersistenceProperty(method));
 		} else if (method.getName().startsWith("set")) {
 			String attName = method.getName().substring(3);
 			Object[] avoidVarargsWarning = null;
@@ -330,7 +323,7 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 			try {
 				getter = m_interface.getMethod("get" + attName, (Class<?>[]) avoidVarargsWarning);
 			} catch (SecurityException e) {
-				s_logger.log(Level.WARNING, String
+				s_logger.warn(String
 						.format("To reflect method '%s' " + "failed when query attribute detail.", "set" + attName), e);
 			} catch (NoSuchMethodException e) {
 
@@ -342,7 +335,7 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 				try {
 					isser = m_interface.getMethod("is" + attName, (Class<?>[]) avoidVarargsWarning);
 				} catch (SecurityException e) {
-					s_logger.log(Level.WARNING, String.format(
+					s_logger.warn(String.format(
 							"To reflect method '%s' " + "failed when query attribute detail.", "set" + attName), e);
 				} catch (NoSuchMethodException e) {
 
@@ -363,18 +356,11 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 	 * @param args
 	 */
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-		final String loggerMethodName = "invoke(Object proxy, Method method, Object[] args)";
-		s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName,
-				"Begin to invoke the proxy object's method in m_methodHandlers");
-		s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "method = " + method.getName());
 		MethodInvocationHandler methodHandler = m_methodHandlers.get(method);
 		if (methodHandler == null) {
-			s_logger.logp(Level.WARNING, CLASS_NAME, loggerMethodName, "methodHandler is null");
 			throw new NoSuchMethodException(String.format("Missing handler method on of the mbean \"%s\": %s",
 					m_interface.getName(), method.toString()));
 		}
-		s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName,
-				"End to invoke the proxy object's method in m_methodHandlers before methodHandler.invoke() return...");
 		return methodHandler.invoke(args);
 	}
 
@@ -382,21 +368,21 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 	 * @param method
 	 * @return
 	 */
-	private IPersistence getPersistenceProperty(Method method) {
-		IPersistence per = null;
-		if (method.getAnnotation(Invisible.class) != null) {
-			per = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.Memory);
-		} else if (method.getAnnotation(InXml.class) != null) {
-			per = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.XML);
-		} else if (method.getAnnotation(InDB.class) != null) {
-			per = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.DB);
-		} else if (method.getAnnotation(InMemory.class) != null) {
-			per = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.Memory);
-		} else {
-			per = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.XML);
-		}
-		return per;
-	}
+//	private IPersistence getPersistenceProperty(Method method) {
+//		IPersistence per = null;
+//		if (method.getAnnotation(Invisible.class) != null) {
+//			per = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.Memory);
+//		} else if (method.getAnnotation(InXml.class) != null) {
+//			per = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.XML);
+//		} else if (method.getAnnotation(InDB.class) != null) {
+//			per = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.DB);
+//		} else if (method.getAnnotation(InMemory.class) != null) {
+//			per = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.Memory);
+//		} else {
+//			per = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.XML);
+//		}
+//		return per;
+//	}
 
 	/**
 	 * Calculate time interval and decide whether access db to refresh cache
@@ -406,9 +392,6 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 	 * @return
 	 */
 	private boolean isCacheExpired(AttributeDetail attDetail, IPersistence m_persistence) {
-
-		final String loggerMethodName = "isCacheExpired";
-		s_logger.logp(Level.FINEST, CLASS_NAME, loggerMethodName, "Begin to isCacheExpired()");
 		boolean cacheExpired = false;
 		long cacheTimeOut = 30 * 60 * 1000;// this.configMBean.getCacheValidityPeriodInMillis();
 
@@ -460,8 +443,6 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 				}
 			}
 		} // memory
-		s_logger.logp(Level.FINEST, CLASS_NAME, loggerMethodName,
-				"End to isCacheExpired() and return cacheExpired = " + cacheExpired);
 
 		return cacheExpired;
 
@@ -495,7 +476,6 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 	 * Responsible for the refresh cache
 	 */
 	class RefreshCacheWorker extends Thread {
-		private final String CLASS_NAME = RefreshCacheWorker.class.getName();
 		IPersistence m_properties;
 
 		public RefreshCacheWorker(IPersistence m_properties) {
@@ -504,8 +484,6 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 
 		@Override
 		public void run() {
-			final String loggerMethodName = "run";
-			s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "Begin to Thread run to refreshCache");
 			try {
 				if (this.m_properties != null) {
 					ConcurrentHashMap<String, ConcurrentHashMap<String, Object>> allMap = this.m_properties
@@ -515,10 +493,8 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 				}
 			} catch (PersistenceException e) {
 				// DbExceptionException logging is special
-				s_logger.log((e instanceof DbConnectionException ? Level.FINEST : Level.WARNING),
-						String.format("Load all attributes from persistence datasource failed!"), e);
+				s_logger.warn(String.format("Load all attributes from persistence datasource failed!"), e);
 			}
-			s_logger.logp(Level.FINER, CLASS_NAME, loggerMethodName, "End to Thread run to refreshCache");
 		}
 
 		/**
@@ -527,7 +503,6 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 		 * @param map
 		 */
 		private void refreshCache(ConcurrentHashMap<String, ConcurrentHashMap<String, Object>> map) {
-			final String loggerMethodName = "refreshCache";
 			if (map != null) {
 				for (String key : map.keySet()) {
 					ConcurrentHashMap<String, Object> attMap = map.get(key);
@@ -536,7 +511,7 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 					} else {
 						// MBeanDetail(Class<T> intf,Object implement,ObjectName
 						// objName,String desc)
-						MBeanDetail detail = new MBeanDetail(null, null, null, null);
+						MBeanDetail<?> detail = new MBeanDetail(null, null, null, null,null);
 						detail.setAttMap(attMap);
 						m_allAttList.put(key, detail);
 					}
@@ -546,7 +521,6 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 	}
 
 	class StoreAttributeWorker extends Thread {
-		private final String CLASS_NAME = StoreAttributeWorker.class.getName();
 		private IPersistence m_properties;
 		private String kName;
 		private String aName;
@@ -564,16 +538,13 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 
 		@Override
 		public void run() {
-			final String loggerMethodName = "run";
 			try {
 				if (m_properties != null)
 					this.m_properties.setProperty(kName, aName, value, attDetail);
 			} catch (PersistenceException e) {
-				s_logger.log(Level.WARNING,
-						String.format("Persistence the mbean(%s)'s attribute(%s) failed.", kName, aName), e);
+				s_logger.warn(String.format("Persistence the mbean(%s)'s attribute(%s) failed.", kName, aName), e);
 			} catch (RuntimeException re) {
-				s_logger.log(Level.WARNING, String.format(						
-						"Encounter RuntimeException when store the attribute(%s) of mbean(%s).", aName, keyName), re);
+				s_logger.warn(String.format("Encounter RuntimeException when store the attribute(%s) of mbean(%s).", aName, keyName), re);
 			}
 		}
 
@@ -591,7 +562,7 @@ public class MBeanInvocationHandler<T> implements InvocationHandler {
 	}
 
 	static class MBeanUtil {
-		public static boolean classEqual(Class mbeanValueClass, Class dbValueClass) {
+		public static boolean classEqual(Class<?> mbeanValueClass, Class<?> dbValueClass) {
 			if (mbeanValueClass == int.class && dbValueClass == Integer.class)
 				return true;
 			if (mbeanValueClass == long.class && dbValueClass == Long.class)
