@@ -1,5 +1,9 @@
 package com.yuwnloy.disconman.persistences;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
 /**
  * 
  * @author xiaoguang.gao
@@ -7,6 +11,9 @@ package com.yuwnloy.disconman.persistences;
  * @date Apr 14, 2016
  */
 public class AttributeDetail {
+	private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+	private ReadLock readLock = lock.readLock();
+	private WriteLock writeLock = lock.writeLock();
 	private String description = "";
 	private String dataType = "";
 	//private DefaultValueAttribute defaultValueAttribute = null;
@@ -85,26 +92,49 @@ public class AttributeDetail {
 	}
 
 	public Object getValue() {
-		return value;
+		this.readLock.lock();
+		try{
+			return value;
+		}finally{
+			this.readLock.unlock();
+		}
 	}
 
 	public void setValue(Object value) {
-		this.value = value;
+		this.writeLock.lock();
+		try{
+			this.value = value;
+		}finally{
+			this.writeLock.unlock();
+		}
 	}
 
-	/*public Class<? extends CustomPropertyValidator> getValidatorClass() {
-		return validatorClass;
-	}
-
-	public void setValidatorClass(
-			Class<? extends CustomPropertyValidator> validatorClass) {
-		this.validatorClass = validatorClass;
-	}*/
 	public boolean isMemory(){
 		boolean ret = true;
 		if(persistence instanceof XmlPersistence){
 			ret = false;
 		}
 		return ret;
+	}
+
+	public ReadLock getReadLock() {
+		return readLock;
+	}
+
+	public WriteLock getWriteLock() {
+		return writeLock;
+	}
+	
+	public void setValueWithTypeCast(String value){
+		Class<?> typeClass = this.getDataTypeClass();
+		if(Integer.class == typeClass||int.class == typeClass){
+			this.setValue(Integer.valueOf(value));
+		}else if(Long.class == typeClass || long.class == typeClass){
+			this.setValue(Long.valueOf(value));
+		}else if(Boolean.class == typeClass || boolean.class == typeClass){
+			this.setValue(Boolean.valueOf(value));
+		}else if(String.class == typeClass){
+			this.setValue(value);
+		}
 	}
 }

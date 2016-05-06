@@ -21,7 +21,7 @@ public interface IPersistence extends Serializable{
    * @return
    */
   public ConcurrentHashMap<String,ConcurrentHashMap<String, Object>> getProperties() throws PersistenceException;
-  public void storeProperties(String domain, ConcurrentHashMap<String, ConfigBeanDetail<?>> map) throws PersistenceException;
+  public void storeProperties(String domain, ConcurrentHashMap<String, ConfigBeanDetail> map) throws PersistenceException;
   /**
    * Get one property based mbeanName
    * @param mbeanName

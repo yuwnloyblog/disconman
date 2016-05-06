@@ -23,14 +23,15 @@ import javax.naming.NamingException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import com.yuwnloy.disconman.annotations.Description;
 import com.yuwnloy.disconman.annotations.Domain;
+import com.yuwnloy.disconman.annotations.Group;
 import com.yuwnloy.disconman.annotations.Name;
 import com.yuwnloy.disconman.exceptions.PersistenceException;
 import com.yuwnloy.disconman.persistences.IPersistence;
 import com.yuwnloy.disconman.persistences.PersistenceFactory;
 import com.yuwnloy.disconman.persistences.XmlPersistence;
+import com.yuwnloy.disconman.zk.ZkClient;
 
 /**
  * 
@@ -40,19 +41,17 @@ import com.yuwnloy.disconman.persistences.XmlPersistence;
  */
 public class ConfigManager {
 	public final static String defaultDomain = "DefaultDomain";
+	public final static String defaultGroup = "DefaultGroup";
 	public final static String defaultFileName = "config.properties";
 	public final static PersistenceFactory.PersistenceType defaultPersistenceType = PersistenceFactory.PersistenceType.Properties;
 	
 	
 	private final static Logger s_logger = LoggerFactory.getLogger(ConfigManager.class);
-	private String currentDomain = defaultDomain;
 	private static ConfigManager s_instance = null;
 	
 	private Map<Class<?>, Map<ObjectName, Object>> m_mbeanImplementations = new ConcurrentHashMap<Class<?>, Map<ObjectName, Object>>();
 	private MBeanServer m_mbeanServer = null;
 	public IPersistence defaultPersistence = null;
-//	private PersistenceFactory.PersistenceType persistenceType = PersistenceFactory.PersistenceType.Properties;
-//	private String filePath = "config.properties";
 	
 	public static void create(){
 		if(s_instance==null)
@@ -89,7 +88,6 @@ public class ConfigManager {
 			try {
 				InitialContext ctx = new InitialContext();
 				m_mbeanServer = MBeanServer.class.cast(ctx.lookup(mbeanserNamePath));
-				s_logger.info("Found WLS runtime MBeanServer");
 			} catch (NamingException e) {
 				m_mbeanServer = ManagementFactory.getPlatformMBeanServer();
 			}
@@ -107,14 +105,7 @@ public class ConfigManager {
 		this.initPersistenceFile(perType, filePath);
 	}
 
-	/**
-	 * Class which contains interface or implement Name and Description
-	 */
-	static class MBeanInfo {
-		String name = "";
-		String desc = "";
-		String domain = "";
-	}
+	
 	/**
 	 * Init MBeanManager with XML file or directory path contains XML file
 	 * 
@@ -141,7 +132,8 @@ public class ConfigManager {
 	public static void Destroy() {
 		XmlPersistence.Clear();
 		// DbProperties.Clear();
-		ConfigBeanInvocationHandler.Clear();
+		//ConfigBeanInvocationHandler.Clear();
+		ZkClient.getInstance().destroy();
 		getInstance().unregisterMBeans();
 		//
 		// configMBean = null;
@@ -167,62 +159,6 @@ public class ConfigManager {
 			s_instance = new ConfigManager(null, persistenceType, fileName);
 	}
 
-	
-
-	/**
-	 * Register an MBean with given interface with only 1 parameter
-	 * 
-	 * @param intf
-	 *            : MBean interface
-	 * @throws NotCompliantMBeanException
-	 * @throws NoSuchMethodException
-	 * @throws Exception
-	 */
-	public <T> DynamicMBean createMBean(Class<T> intf)
-			throws NotCompliantMBeanException, NoSuchMethodException, Exception {
-		return createMBean(intf, null);
-	}
-
-	/**
-	 * Register an MBean with given interface and implementation with 2
-	 * parameters
-	 * 
-	 * @param intf
-	 *            : MBean interface
-	 * @param impl
-	 *            : MBean instance.
-	 * @throws NotCompliantMBeanException
-	 * @throws NoSuchMethodException
-	 * @throws Exception
-	 */
-	public <T> DynamicMBean createMBean(Class<T> intf, Object impl)
-			throws NotCompliantMBeanException, NoSuchMethodException, Exception {
-		String desc = this.getDesc(intf, impl);
-		ObjectName objName = getObjectName(intf, impl);
-		return createMBean(intf, impl, objName, desc);
-	}
-
-	/**
-	 * Get the description of class
-	 * 
-	 * @param intf
-	 * @param impl
-	 * @return
-	 */
-	private String getDesc(Class<?> intf, Object impl) {
-		String desc = "";
-		MBeanInfo mbinfo = new MBeanInfo();
-
-		if (impl != null) {
-			mbinfo = getMBeanInfo(impl.getClass());
-			desc = mbinfo.desc;
-		}
-
-		mbinfo = getMBeanInfo(intf);
-		desc = desc.equalsIgnoreCase("") ? mbinfo.desc : desc;
-		return desc;
-	}
-
 	/**
 	 * Register an MBean with given interface and implementation with 4
 	 * parameters
@@ -242,12 +178,6 @@ public class ConfigManager {
 	 * 
 	 * @param <T>
 	 *            : MBean interface
-	 * @param impl
-	 *            : MBean instance(implement)
-	 * @param objName
-	 *            : Object Name registered in MBean Server
-	 * @param description
-	 *            : MBean Description
 	 * @return DynamicMBean : Supporting the interface intf.
 	 * @throws NotCompliantMBeanException
 	 * @throws NoSuchMethodException
@@ -256,14 +186,13 @@ public class ConfigManager {
 	 *             annotations or the given impl object.
 	 * @throws Exception
 	 */
-	public <T> DynamicMBean createMBean(Class<T> intf, Object impl, ObjectName objName, String description)
+	public <T> DynamicMBean createMBean(Class<T> intf)
 			throws NotCompliantMBeanException, NoSuchMethodException, Exception {
-		// StandardMBean mbean = createMBean(intf, impl, description);
-		
-		ConfigBeanDetail<T> detail = new ConfigBeanDetail<T>(intf, impl, objName, description, this.defaultPersistence);
+		MBeanInfo mbInfo = this.getMBeanInfo(intf);
+		ConfigBeanDetail detail = new ConfigBeanDetail(intf, mbInfo,this.getObjectName(intf), this.defaultPersistence);
 		T proxy = generateProxy(detail);
-		StandardMBean mbean = new StandardMBeanWithAnnotations(proxy, intf, description);
-		registerMBean(mbean, objName, intf);
+		StandardMBean mbean = new StandardMBeanWithAnnotations(proxy, intf, mbInfo.desc);
+		registerMBean(mbean, detail.getObjName(), intf);
 		return mbean;
 	}
 
@@ -287,19 +216,7 @@ public class ConfigManager {
 		}
 		return Collections.emptyList();
 	}
-
-	/**
-	 * Return the mbean implementation for the current instance
-	 * 
-	 * @param interfaceClass
-	 *            : the MBean interface class
-	 * @return the instance of the specific MBean interface
-	 * @throws InstanceNotFoundException
-	 */
-	public <T> T getMBean(Class<T> interfaceClass) {
-		return this.getMBean(interfaceClass, null);
-	}
-
+	
 	/**
 	 * Return the mbean implementation by ObjectName
 	 * 
@@ -325,19 +242,18 @@ public class ConfigManager {
 	/**
 	 * Return the mbean implementation for the current instance
 	 * 
-	 * @param intf
+	 * @param interfaceClass
 	 *            : the MBean interface class
-	 * @param impl
-	 *            : the Implement of the MBean interface, it can be null
 	 * @return the instance of the specific MBean interface
+	 * @throws InstanceNotFoundException
 	 */
-	public <T> T getMBean(Class<T> intf, Object impl) {
+	public <T> T getMBean(Class<T> intf) {
 		Map<ObjectName, Object> mbeansMap = null;
 		if (m_mbeanImplementations.containsKey(intf)) {
 			mbeansMap = m_mbeanImplementations.get(intf);
 		}
 
-		ObjectName on = getObjectName(intf, impl);
+		ObjectName on = getObjectName(intf);
 		if (mbeansMap != null && !mbeansMap.isEmpty()) {
 			if (on != null && mbeansMap.containsKey(on)) {
 				Object obj = mbeansMap.get(on);
@@ -345,44 +261,6 @@ public class ConfigManager {
 			}
 		}
 		return null;
-	}
-
-	/**
-	 * Create an Object Name for the interface and implement
-	 * 
-	 * @param intf
-	 *            : MBean interface
-	 * @param impl
-	 *            : the implement of MBean interface
-	 * @return
-	 */
-	public ObjectName getObjectName(Class<?> intf, Object impl) {
-		String name = "";
-		String domain = "";
-		MBeanInfo mbinfo = new MBeanInfo();
-
-		if (impl != null) {
-			mbinfo = getMBeanInfo(impl.getClass());
-			domain = mbinfo.domain;
-			name = ",name=" + mbinfo.name;
-		}
-		mbinfo = getMBeanInfo(intf);
-		domain = (impl == null || domain.equalsIgnoreCase("")) ? mbinfo.domain : domain;
-
-		if (domain == null || domain.trim().equals("")) {
-			domain = currentDomain;
-		}
-		// add identity into domain
-		// domain = configMBean.getGroupIdentity() + domain;
-		name = domain + ":type=" + mbinfo.name + name;
-
-		ObjectName objName = null;
-		try {
-			objName = new ObjectName(name);
-		} catch (MalformedObjectNameException e) {
-			s_logger.warn(e.toString());
-		}
-		return objName;
 	}
 
 	/**
@@ -414,22 +292,7 @@ public class ConfigManager {
 	 * @return
 	 */
 	public boolean isRegistered(Class<?> intf) {
-		ObjectName objname = getObjectName(intf, null);
-		return this.isRegistered(objname);
-	}
-
-	/**
-	 * Check whether the MBean interface with implement has been registered in
-	 * MBean Server
-	 * 
-	 * @param intf
-	 *            : MBean interface
-	 * @param impl
-	 *            : the implement of MBean interface
-	 * @return
-	 */
-	public boolean isRegistered(Class<?> intf, Object impl) {
-		ObjectName objname = getObjectName(intf, impl);
+		ObjectName objname = getObjectName(intf);
 		return this.isRegistered(objname);
 	}
 
@@ -454,22 +317,7 @@ public class ConfigManager {
 	 *            : MBean interface
 	 */
 	public void unregisterMBean(Class<?> intf) {
-		ObjectName objname = getObjectName(intf, null);
-		unregisterMBean(objname);
-	}
-
-	/**
-	 * Unregister MBean interface from MBean Server with 2 parameters interface
-	 * name and implement name, the object name will be created according to
-	 * MBean Service policy
-	 * 
-	 * @param intf
-	 *            : MBean interface
-	 * @param impl
-	 *            : the implement of MBean interface
-	 */
-	public void unregisterMBean(Class<?> intf, Object impl) {
-		ObjectName objname = getObjectName(intf, impl);
+		ObjectName objname = getObjectName(intf);
 		unregisterMBean(objname);
 	}
 
@@ -529,50 +377,12 @@ public class ConfigManager {
 	 * @throws IllegalArgumentException
 	 * @throws NoSuchMethodException
 	 */
-	private <T> T generateProxy(ConfigBeanDetail<T> detail)
+	@SuppressWarnings("unchecked")
+	private <T> T generateProxy(ConfigBeanDetail detail)
 			throws IllegalArgumentException, NoSuchMethodException, PersistenceException {
-		Class<T> intf = detail.getIntf();
-		return intf.cast(Proxy.newProxyInstance(intf.getClassLoader(), new Class[] { intf },
-				new ConfigBeanInvocationHandler<T>(detail)));
-	}
-
-	/**
-	 * Get interface or implement Name and Description
-	 * 
-	 * @param cls
-	 *            : MBean interface or implement
-	 */
-	private MBeanInfo getMBeanInfo(Class<?> cls) {
-		String name = "";
-		String desc = "";
-		;
-		String domain = "";
-		MBeanInfo mbinfo = new MBeanInfo();
-
-		if (cls == null) {
-			s_logger.error("Interface or Implement is null, throws NullPointerException!");
-			throw new NullPointerException("Interface or Implement is null, throws NullPointerException!");
-		}
-		try {
-			name = ((Name) cls.getAnnotation(Name.class)).value();
-		} catch (NullPointerException e) {
-			// NOTHING TO DO HERE, logger probably here
-		}
-		try {
-			desc = ((Description) cls.getAnnotation(Description.class)).value();
-		} catch (NullPointerException e) {
-			// NOTHING TO DO HERE, logger probably here
-		}
-		try {
-			domain = ((Domain) cls.getAnnotation(Domain.class)).value();
-		} catch (NullPointerException e) {
-			// nothing to do here
-		}
-		mbinfo.name = name.equalsIgnoreCase("") ? cls.getSimpleName() : name;
-		mbinfo.desc = desc;
-		mbinfo.domain = domain;
-
-		return mbinfo;
+		Class<?> intf = detail.getIntf();
+		return (T) intf.cast(Proxy.newProxyInstance(intf.getClassLoader(), new Class[] { intf },
+				new ConfigBeanInvocationHandler(detail)));
 	}
 
 	/**
@@ -618,5 +428,73 @@ public class ConfigManager {
 		if (objName != null) {
 			unregisterMBean(objName);
 		}
+	}
+	
+	/**
+	 * Class which contains interface or implement Name and Description
+	 */
+	public static class MBeanInfo {
+		public String name = null;
+		public String group = ConfigManager.defaultGroup;
+		public String desc = null;
+		public String domain = ConfigManager.defaultDomain;
+	}
+	
+	/**
+	 * Get interface or implement Name and Description
+	 * 
+	 * @param cls
+	 *            : MBean interface or implement
+	 */
+	private MBeanInfo getMBeanInfo(Class<?> cls) {
+		MBeanInfo mbinfo = new MBeanInfo();
+
+		if (cls == null) {
+			//s_logger.error("Interface or Implement is null, throws NullPointerException!");
+			throw new NullPointerException("Interface or Implement is null, throws NullPointerException!");
+		}
+		try {
+			mbinfo.name = ((Name) cls.getAnnotation(Name.class)).value();
+		} catch (NullPointerException e) {
+			// NOTHING TO DO HERE, logger probably here
+		}
+		try {
+			mbinfo.desc = ((Description) cls.getAnnotation(Description.class)).value();
+		} catch (NullPointerException e) {
+			// NOTHING TO DO HERE, logger probably here
+		}
+		try {
+			mbinfo.domain = ((Domain) cls.getAnnotation(Domain.class)).value();
+		} catch (NullPointerException e) {
+			// nothing to do here
+		}
+		try{
+			mbinfo.group = ((Group)cls.getAnnotation(Group.class)).value();
+		} catch (NullPointerException e){
+			
+		}
+		if(mbinfo.name==null)
+			mbinfo.name = cls.getSimpleName();
+		return mbinfo;
+	}
+	/**
+	 * Create an Object Name for the interface and implement
+	 * 
+	 * @param intf
+	 *            : MBean interface
+	 * @param impl
+	 *            : the implement of MBean interface
+	 * @return
+	 */
+	public ObjectName getObjectName(Class<?> intf) {
+		MBeanInfo mbeanInfo = this.getMBeanInfo(intf);
+		String objname = mbeanInfo.domain + ":group="+mbeanInfo.group+",name=" + mbeanInfo.name;
+		ObjectName objName = null;
+		try {
+			objName = new ObjectName(objname);
+		} catch (MalformedObjectNameException e) {
+			//s_logger.warn(e.toString());
+		}
+		return objName;
 	}
 }

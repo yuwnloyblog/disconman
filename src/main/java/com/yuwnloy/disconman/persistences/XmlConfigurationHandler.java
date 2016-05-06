@@ -247,7 +247,7 @@ public class XmlConfigurationHandler implements IConfigurationHandler{
         
         //valueFromPersistence.setDefaultValueVersion(Integer.valueOf(defaultValueVersion));
         config.addAttDetail(attName, detail);
-        config.addAttribute(attName,detail.getValue());
+        //config.addAttribute(attName,detail.getValue());
         
         
         description = "";
@@ -475,8 +475,8 @@ public class XmlConfigurationHandler implements IConfigurationHandler{
       fatherEle.appendChild(sectionEle);
 			
       //attribute List
-      if (config.getAttMap() != null) {
-        for (String attName : config.getAttMap().keySet()) {
+      if (config.getAttDetailMap() != null) {
+        for (String attName : config.getAttDetailMap().keySet()) {
           //add the attribute's comment
           if(config.getAttDetailMap() != null){
         	AttributeDetail detail = config.getAttDetailMap().get(attName);
@@ -498,10 +498,10 @@ public class XmlConfigurationHandler implements IConfigurationHandler{
           Element attEle = doc.createElement("Attribute");
           attEle.setAttribute("name", attName);
           String value = null;
-          if(config.getAttMap().get(attName)!=null)
-          {
-        	  value = config.getAttMap().get(attName)+"";
-          }
+//          if(config.getAttMap().get(attName)!=null)
+//          {
+//        	  value = config.getAttMap().get(attName)+"";
+//          }
 	      attEle.setTextContent(value);
 	      //add this attribute node
 	      sectionEle.appendChild(attEle);

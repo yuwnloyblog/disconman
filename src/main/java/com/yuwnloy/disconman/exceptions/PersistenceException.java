@@ -5,7 +5,7 @@ package com.yuwnloy.disconman.exceptions;
  *
  * @date Apr 14, 2016
  */
-public class PersistenceException extends Exception{
+public class PersistenceException extends DisconmanException{
 
 	/**
 	 * 

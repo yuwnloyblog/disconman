@@ -95,7 +95,7 @@ public class PropertiesConfigurationHandler implements IConfigurationHandler{
 					 configurationMap.put(domainAndName, configuration);
 				 }
 				 //configuration.removeAttribute(keyParts[2]);
-				 configuration.addAttribute(keyParts[2], props.get(keyStr));//set the attribute's value of bean
+				// configuration.addAttribute(keyParts[2], props.get(keyStr));//set the attribute's value of bean
 				 
 			 }else if(keyParts.length==4){//the detail info of attribute of bean
 				 String domainAndName = keyParts[0]+"."+keyParts[1];
@@ -130,14 +130,14 @@ public class PropertiesConfigurationHandler implements IConfigurationHandler{
 		 }
 		 ArrayList<XmlConfiguration> configList = new ArrayList<XmlConfiguration>();
 		 for(XmlConfiguration xconfig : configurationMap.values()){
-			 if(xconfig.getAttMap()!=null){
-				 for(String att : xconfig.getAttMap().keySet()){
+			 if(xconfig.getAttDetailMap()!=null){
+				 for(String att : xconfig.getAttDetailMap().keySet()){
 					 AttributeDetail detail = xconfig.getAttDetailMap().get(att);
 					 if(detail!=null){
-						 Object value = xconfig.getAttMap().get(att);
+						 Object value = xconfig.getAttDetailMap().get(att).getValue();
 						 detail.setDefaultValue(DataConvert.convert(detail.getDataTypeClass(), detail.getDefaultValue()));
 						 detail.setValue(DataConvert.convert(detail.getDataTypeClass(), value));
-						 xconfig.getAttMap().put(att, DataConvert.convert(detail.getDataTypeClass(), value));
+						 //xconfig.getAttMap().put(att, DataConvert.convert(detail.getDataTypeClass(), value));
 						 
 					 }
 				 }
@@ -161,8 +161,8 @@ public class PropertiesConfigurationHandler implements IConfigurationHandler{
 					 beanName = beanName.replace("type=", "");
 				 String domainAndName = config.getDomain()+"."+beanName;
 				 valueList.add(domainAndName+"="+config.getDescription());//bean's description
-				 for(String attName : config.getAttMap().keySet()){
-					 valueList.add(domainAndName+"."+attName+"="+config.getAttMap().get(attName));//att's value
+				 for(String attName : config.getAttDetailMap().keySet()){
+					 valueList.add(domainAndName+"."+attName+"="+config.getAttDetailMap().get(attName));//att's value
 					 //att's detail 
 					 if(config.getAttDetailMap()!=null){
 						 AttributeDetail detail = config.getAttDetailMap().get(attName);
@@ -192,7 +192,7 @@ public class PropertiesConfigurationHandler implements IConfigurationHandler{
 	public static void main(String[] args){
 		Collection<XmlConfiguration> list = PropertiesConfigurationHandler.getInstance().parseFile(new File("D:/config/xiao1.properties"));
 		for(XmlConfiguration conf : list){
-			System.out.println(conf.getAttMap().size());
+			System.out.println(conf.getAttDetailMap().size());
 		}
 		
 	}

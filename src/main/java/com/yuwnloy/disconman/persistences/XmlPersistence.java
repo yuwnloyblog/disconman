@@ -66,8 +66,8 @@ public class XmlPersistence implements IPersistence, Serializable {
 		ConcurrentHashMap<String, ConcurrentHashMap<String, Object>> map = new ConcurrentHashMap<String, ConcurrentHashMap<String, Object>>();
 		if (configList != null) {
 			for (XmlConfiguration config : configList) {
-				if (config.getAttMap() != null && config.getAttMap().size() > 0) {
-					map.put(config.getFullName(), config.getAttMap());
+				if (config.getAttDetailMap() != null && config.getAttDetailMap().size() > 0) {
+					//map.put(config.getFullName(), config.getAttDetailMap());
 				}
 			}
 		}
@@ -79,9 +79,9 @@ public class XmlPersistence implements IPersistence, Serializable {
 		if (configList != null) {
 			for (XmlConfiguration config : configList) {
 				if (config.getFullName().equalsIgnoreCase(mbeanName)) {
-					if (config.getAttMap() != null) {
-						return config.getAttMap().get(propertyName);
-					}
+//					if (config.getAttMap() != null) {
+//						return config.getAttMap().get(propertyName);
+//					}
 				}
 			}
 		}
@@ -107,7 +107,7 @@ public class XmlPersistence implements IPersistence, Serializable {
 			realConfig.setDescription(this.tmpMBeanDesc);
 			configList.add(realConfig);
 		}
-		realConfig.addAttribute(propertyName, value);
+		//realConfig.addAttribute(propertyName, value);
 		realConfig.addAttDetail(propertyName, attDetail);
 
 		File xmltmpFile = new File(this.filePath);
@@ -205,14 +205,15 @@ public class XmlPersistence implements IPersistence, Serializable {
 
 	}
 	@Override
-	public void storeProperties(String domain, ConcurrentHashMap<String, ConfigBeanDetail<?>> map)
+	public void storeProperties(String domain, ConcurrentHashMap<String, ConfigBeanDetail> map)
 			throws PersistenceException {
 		Collection<XmlConfiguration> configList = new ArrayList<XmlConfiguration>();
 		for(String key : map.keySet()){
 			XmlConfiguration config = new XmlConfiguration();
 			config.setName(key);
 			config.setDomain(domain);
-			config.setAttMap(map.get(key).getAttMap());
+			//config.setAttMap(map.get(key).getAttMap());
+			config.setAttDetailMap(map.get(key).getAttDetailMap());
 			configList.add(config);
 			System.out.println("key:"+map.get(key).getIntf().getName());
 		}

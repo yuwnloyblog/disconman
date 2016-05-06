@@ -72,7 +72,7 @@ public class PersistenceFactory {
 				}
 
 				@Override
-				public void storeProperties(String domain, ConcurrentHashMap<String, ConfigBeanDetail<?>> map)
+				public void storeProperties(String domain, ConcurrentHashMap<String, ConfigBeanDetail> map)
 						throws PersistenceException {
 					// TODO Auto-generated method stub
 					
