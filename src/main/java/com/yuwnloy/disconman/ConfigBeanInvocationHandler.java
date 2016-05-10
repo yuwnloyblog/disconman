@@ -18,6 +18,7 @@ import com.yuwnloy.disconman.annotations.StringDefaultValue;
 import com.yuwnloy.disconman.exceptions.PersistenceException;
 import com.yuwnloy.disconman.persistences.AttributeDetail;
 import com.yuwnloy.disconman.persistences.IPersistence;
+import com.yuwnloy.disconman.utils.ThreadPool;
 import com.yuwnloy.disconman.zk.ZkClient;
 /**
  * 
@@ -46,6 +47,7 @@ public class ConfigBeanInvocationHandler implements InvocationHandler {
 	public static final ConcurrentHashMap<String, ConfigBeanDetail> m_allBeanList = new ConcurrentHashMap<String, ConfigBeanDetail>();
 
 	private Map<Method, MethodInvocationHandler> m_methodHandlers;
+	private final ConfigBeanDetail beanDetail;
 
 	/**
 	 * 
@@ -54,11 +56,12 @@ public class ConfigBeanInvocationHandler implements InvocationHandler {
 	 * @throws NoSuchMethodException
 	 */
 	public ConfigBeanInvocationHandler(ConfigBeanDetail detail) throws NoSuchMethodException, PersistenceException {
-
+		this.beanDetail = detail;
 		if (detail == null) {
 			s_logger.warn("detail is null. return null.");
 			return;
 		}
+		
 		m_interface = detail.getIntf();
 
 		m_methodHandlers = new HashMap<Method, MethodInvocationHandler>(m_interface.getMethods().length);
@@ -165,8 +168,19 @@ public class ConfigBeanInvocationHandler implements InvocationHandler {
 						Object value = args[0];
 						if(m_allBeanList.containsKey(keyName)){
 							ConcurrentHashMap<String, AttributeDetail> m_attributeList = m_allBeanList.get(keyName).getAttDetailMap();
-							if(m_attributeList.containsKey(attName))
+							if(m_attributeList.containsKey(attName)){
 								m_attributeList.get(attName).setValue(value);
+								//sync to zk
+								ThreadPool.Execute(new Runnable(){
+
+									@Override
+									public void run() {
+										String domain = beanDetail.getMbeanInfo().domain;
+										String group = beanDetail.getMbeanInfo().group;
+										String name = beanDetail.getMbeanInfo().name;
+										ZkClient.getInstance().setAttValue(domain, group, name, attName, value);
+									}});
+							}
 						}
 						return null;
 					}

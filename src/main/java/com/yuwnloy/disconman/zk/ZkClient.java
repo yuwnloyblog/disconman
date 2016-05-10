@@ -1,6 +1,5 @@
 package com.yuwnloy.disconman.zk;
 
-import java.io.UnsupportedEncodingException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -42,7 +41,7 @@ public class ZkClient {
 
 	public void connect() {
 		client = CuratorFrameworkFactory.builder()
-					.connectString("127.0.0.1:2181")
+					.connectString("127.0.0.1:2182")
 					.sessionTimeoutMs(5000)
 					.connectionTimeoutMs(3000)
 					.retryPolicy(new ExponentialBackoffRetry(1000, 3))
@@ -60,6 +59,16 @@ public class ZkClient {
 				if(attDetail!=null)
 					this.handleAttDetail(domain, group, name, attName, attDetail);
 			}
+		}
+	}
+	
+	public void setAttValue(String domain, String group,String beanName, String attName, Object attValue){
+		String path = "/" + RootName + "/" + domain + "/" + group + "/" + beanName + "/" + attName;
+		try {
+			client.setData().forPath(path,SafeEncoder.encode(attValue));
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 
