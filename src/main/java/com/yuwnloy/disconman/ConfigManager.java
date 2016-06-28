@@ -31,6 +31,7 @@ import com.yuwnloy.disconman.exceptions.PersistenceException;
 import com.yuwnloy.disconman.persistences.IPersistence;
 import com.yuwnloy.disconman.persistences.PersistenceFactory;
 import com.yuwnloy.disconman.persistences.XmlPersistence;
+import com.yuwnloy.disconman.utils.ThreadPool;
 import com.yuwnloy.disconman.zk.ZkClient;
 
 /**
@@ -138,6 +139,7 @@ public class ConfigManager {
 		//
 		// configMBean = null;
 		s_instance = null;
+		ThreadPool.shutdown();
 	}
 
 	/**
