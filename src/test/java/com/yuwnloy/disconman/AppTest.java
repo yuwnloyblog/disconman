@@ -18,9 +18,9 @@ public class AppTest {
 			ConfigManager.getInstance().createMBean(MethodTest.class, new MethodTest(){
 
 				@Override
-				public void reforceRefresh() {
+				public void reforceRefresh(long appId) {
 					// TODO Auto-generated method stub
-					System.out.println("Test:"+System.currentTimeMillis());
+					System.out.println("Test:"+System.currentTimeMillis()+","+appId);
 				}});
 			Xiao x = ConfigManager.getInstance().getMBean(Xiao.class);
 			while(true){
@@ -57,6 +57,6 @@ public class AppTest {
     @Description("test method")
     public static interface MethodTest{
     	@Description("test method fsfs")
-    	public void reforceRefresh();
+    	public void reforceRefresh(long appId);
     }
 }
