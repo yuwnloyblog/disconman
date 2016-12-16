@@ -16,15 +16,8 @@ public class AttributeDetail {
 	private WriteLock writeLock = lock.writeLock();
 	private String description = "";
 	private String dataType = "";
-	//private DefaultValueAttribute defaultValueAttribute = null;
 	private Object value;
 	private Object defaultValue;
-	
-	private IPersistence persistence = PersistenceFactory.getPersistenceInstance(PersistenceFactory.PersistenceType.Memory,null);
-	//private Class<? extends CustomPropertyValidator> validatorClass = null;
-	
-	
-	
 
 	public String getDescription() {
 		return description;
@@ -75,9 +68,6 @@ public class AttributeDetail {
 		else if(type == boolean.class)
 			this.dataType = "boolean";
 	}
-	public IPersistence getPersistence() {
-		return persistence;
-	}
 
 	public Object getDefaultValue() {
 		return defaultValue;
@@ -85,10 +75,6 @@ public class AttributeDetail {
 
 	public void setDefaultValue(Object defaultValue) {
 		this.defaultValue = defaultValue;
-	}
-
-	public void setPersistence(IPersistence persistence) {
-		this.persistence = persistence;
 	}
 
 	public Object getValue() {
@@ -111,9 +97,6 @@ public class AttributeDetail {
 
 	public boolean isMemory(){
 		boolean ret = true;
-		if(persistence instanceof XmlPersistence){
-			ret = false;
-		}
 		return ret;
 	}
 

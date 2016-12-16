@@ -15,8 +15,6 @@ import com.yuwnloy.disconman.annotations.Domain;
 import com.yuwnloy.disconman.annotations.Group;
 import com.yuwnloy.disconman.annotations.Name;
 import com.yuwnloy.disconman.persistences.AttributeDetail;
-import com.yuwnloy.disconman.persistences.IPersistence;
-import com.yuwnloy.disconman.persistences.PersistenceFactory;
 
 /**
  * 
@@ -30,18 +28,12 @@ public class ConfigBeanDetail {
 	private String description = "";
 	private Class<?> intf = null;
 	private ConcurrentHashMap<String, AttributeDetail> attDetailMap = new ConcurrentHashMap<String, AttributeDetail>();
-	private IPersistence persistence;
 
-	public ConfigBeanDetail(Class<?> intf, MBeanInfo mbeanInfo, ObjectName objName, IPersistence persistence) {
+	public ConfigBeanDetail(Class<?> intf, MBeanInfo mbeanInfo, ObjectName objName) {
 		this.mbeanInfo = mbeanInfo;
 		this.objName = objName;
 		this.description = mbeanInfo.desc;
 		this.intf = intf;
-		if (persistence != null)
-			this.persistence = persistence;
-		else
-			this.persistence = PersistenceFactory.getPersistenceInstance(ConfigManager.defaultPersistenceType,
-					ConfigManager.defaultFileName);
 	}
 
 	public ObjectName getObjName() {
@@ -75,16 +67,6 @@ public class ConfigBeanDetail {
 	public void setAttDetailMap(ConcurrentHashMap<String, AttributeDetail> attDetailMap) {
 		this.attDetailMap = attDetailMap;
 	}
-
-	public IPersistence getPersistence() {
-		return persistence;
-	}
-
-	public void setPersistence(IPersistence persistence) {
-		this.persistence = persistence;
-	}
-	
-	
 
 	public MBeanInfo getMbeanInfo() {
 		return mbeanInfo;

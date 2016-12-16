@@ -1,6 +1,5 @@
 package com.yuwnloy.disconman;
 
-import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
@@ -18,21 +17,15 @@ import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import com.yuwnloy.disconman.annotations.Description;
 import com.yuwnloy.disconman.annotations.Domain;
 import com.yuwnloy.disconman.annotations.Group;
 import com.yuwnloy.disconman.annotations.Name;
-import com.yuwnloy.disconman.exceptions.PersistenceException;
-import com.yuwnloy.disconman.persistences.IPersistence;
-import com.yuwnloy.disconman.persistences.PersistenceFactory;
-import com.yuwnloy.disconman.persistences.XmlPersistence;
 import com.yuwnloy.disconman.utils.ThreadPool;
-import com.yuwnloy.disconman.zk.ZkClient;
 
 /**
  * 
@@ -43,8 +36,6 @@ import com.yuwnloy.disconman.zk.ZkClient;
 public class ConfigManager {
 	public final static String defaultDomain = "DefaultDomain";
 	public final static String defaultGroup = "DefaultGroup";
-	public final static String defaultFileName = "config.properties";
-	public final static PersistenceFactory.PersistenceType defaultPersistenceType = PersistenceFactory.PersistenceType.Properties;
 	
 	
 	private final static Logger s_logger = LoggerFactory.getLogger(ConfigManager.class);
@@ -52,89 +43,14 @@ public class ConfigManager {
 	
 	private Map<Class<?>, Map<ObjectName, Object>> m_mbeanImplementations = new ConcurrentHashMap<Class<?>, Map<ObjectName, Object>>();
 	private MBeanServer m_mbeanServer = null;
-	public IPersistence defaultPersistence = null;
 	
-	public static void create(){
-		if(s_instance==null)
-			init(null,null);
+	private ConfigManager(){
+		m_mbeanServer = ManagementFactory.getPlatformMBeanServer();
 	}
-	public static void create(String domain, PersistenceFactory.PersistenceType persistenceType,String fileName){
-		if(PersistenceFactory.PersistenceType.XML.equals(persistenceType)||PersistenceFactory.PersistenceType.Properties.equals(persistenceType)){
-			//validate the file.
-			File file = new File(fileName);
-			if(file.exists()){
-				if(file.isDirectory()){
-					String ext = "properties";
-					if(PersistenceFactory.PersistenceType.XML.equals(persistenceType))
-						ext = "xml";
-					fileName = fileName+File.separator+"config."+ext;
-				}
-			}
-		}
-		if(s_instance==null){
-			init(persistenceType, fileName);
-		}
-	}
-
-	private ConfigManager() {
-		this(null,null,null);
-	}
-	
-	private ConfigManager(String mbeanserNamePath){
-		this(mbeanserNamePath,null,null);
-	}
-	
-	private ConfigManager(String mbeanserNamePath,PersistenceFactory.PersistenceType persistenceType,String fileName){
-		if(mbeanserNamePath!=null){
-			try {
-				InitialContext ctx = new InitialContext();
-				m_mbeanServer = MBeanServer.class.cast(ctx.lookup(mbeanserNamePath));
-			} catch (NamingException e) {
-				m_mbeanServer = ManagementFactory.getPlatformMBeanServer();
-			}
-		}else{
-			m_mbeanServer = ManagementFactory.getPlatformMBeanServer();
-		}
-		PersistenceFactory.PersistenceType perType = ConfigManager.defaultPersistenceType;
-		if(persistenceType!=null){
-			perType = persistenceType;
-		}
-		String filePath = "config.properties";
-		if(fileName!=null){
-			filePath = fileName;
-		}
-		this.initPersistenceFile(perType, filePath);
-	}
-
-	
-	/**
-	 * Init MBeanManager with XML file or directory path contains XML file
-	 * 
-	 * @param xmlFile
-	 */
-	private void initPersistenceFile(PersistenceFactory.PersistenceType persistenceType,String filePath) {
-		try {
-			if(PersistenceFactory.PersistenceType.XML.equals(persistenceType)){//xml
-				defaultPersistence = PersistenceFactory.getPersistenceInstance(persistenceType,filePath);
-			}else if(PersistenceFactory.PersistenceType.Properties.equals(persistenceType)){//properties file
-				defaultPersistence = PersistenceFactory.getPersistenceInstance(persistenceType,filePath);
-			}else if(PersistenceFactory.PersistenceType.DB.equals(persistenceType)){//db
-				
-			}
-		} catch (RuntimeException e) {
-			s_logger.error("initiate the MBeanManager instance failed with error: [" + e.getMessage() + "]", e);
-			throw new RuntimeException(e);
-		}
-	}
-
 	/**
 	 * Desctroy the content related mbean framewrok
 	 */
 	public static void Destroy() {
-		XmlPersistence.Clear();
-		// DbProperties.Clear();
-		//ConfigBeanInvocationHandler.Clear();
-		ZkClient.getInstance().destroy();
 		getInstance().unregisterMBeans();
 		//
 		// configMBean = null;
@@ -151,14 +67,14 @@ public class ConfigManager {
 	 */
 	public static ConfigManager getInstance() {
 		if (s_instance == null) {
-			throw new RuntimeException("Please call ConfigManager.create() before get the instance.");
+			init();
 		}
 		return s_instance;
 	}
 	
-	private static synchronized void init(PersistenceFactory.PersistenceType persistenceType,String fileName){
+	private static synchronized void init(){
 		if(s_instance==null)
-			s_instance = new ConfigManager(null, persistenceType, fileName);
+			s_instance = new ConfigManager();
 	}
 
 	/**
@@ -191,10 +107,18 @@ public class ConfigManager {
 	public <T> DynamicMBean createMBean(Class<T> intf)
 			throws NotCompliantMBeanException, NoSuchMethodException, Exception {
 		MBeanInfo mbInfo = this.getMBeanInfo(intf);
-		ConfigBeanDetail detail = new ConfigBeanDetail(intf, mbInfo,this.getObjectName(intf), this.defaultPersistence);
+		ConfigBeanDetail detail = new ConfigBeanDetail(intf, mbInfo,this.getObjectName(intf));
 		T proxy = generateProxy(detail);
 		StandardMBean mbean = new StandardMBeanWithAnnotations(proxy, intf, mbInfo.desc);
 		registerMBean(mbean, detail.getObjName(), intf);
+		return mbean;
+	}
+	
+	public <T> DynamicMBean createMBean(Class<T> intf, Object impl)
+			throws NotCompliantMBeanException, NoSuchMethodException, Exception{
+		MBeanInfo mbInfo = this.getMBeanInfo(intf);
+		StandardMBean mbean = new StandardMBeanWithAnnotations(impl, intf, mbInfo.desc);
+		registerMBean(mbean, this.getObjectName(intf), intf);
 		return mbean;
 	}
 
@@ -381,7 +305,7 @@ public class ConfigManager {
 	 */
 	@SuppressWarnings("unchecked")
 	private <T> T generateProxy(ConfigBeanDetail detail)
-			throws IllegalArgumentException, NoSuchMethodException, PersistenceException {
+			throws IllegalArgumentException, NoSuchMethodException {
 		Class<?> intf = detail.getIntf();
 		return (T) intf.cast(Proxy.newProxyInstance(intf.getClassLoader(), new Class[] { intf },
 				new ConfigBeanInvocationHandler(detail)));
@@ -457,22 +381,22 @@ public class ConfigManager {
 		}
 		try {
 			mbinfo.name = ((Name) cls.getAnnotation(Name.class)).value();
-		} catch (NullPointerException e) {
+		} catch (Exception e) {
 			// NOTHING TO DO HERE, logger probably here
 		}
 		try {
 			mbinfo.desc = ((Description) cls.getAnnotation(Description.class)).value();
-		} catch (NullPointerException e) {
+		} catch (Exception e) {
 			// NOTHING TO DO HERE, logger probably here
 		}
 		try {
 			mbinfo.domain = ((Domain) cls.getAnnotation(Domain.class)).value();
-		} catch (NullPointerException e) {
+		} catch (Exception e) {
 			// nothing to do here
 		}
 		try{
 			mbinfo.group = ((Group)cls.getAnnotation(Group.class)).value();
-		} catch (NullPointerException e){
+		} catch (Exception e){
 			
 		}
 		if(mbinfo.name==null)

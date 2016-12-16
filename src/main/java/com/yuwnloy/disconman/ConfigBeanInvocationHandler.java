@@ -15,11 +15,7 @@ import com.yuwnloy.disconman.annotations.Description;
 import com.yuwnloy.disconman.annotations.IntDefaultValue;
 import com.yuwnloy.disconman.annotations.LongDefaultValue;
 import com.yuwnloy.disconman.annotations.StringDefaultValue;
-import com.yuwnloy.disconman.exceptions.PersistenceException;
 import com.yuwnloy.disconman.persistences.AttributeDetail;
-import com.yuwnloy.disconman.persistences.IPersistence;
-import com.yuwnloy.disconman.utils.ThreadPool;
-import com.yuwnloy.disconman.zk.ZkClient;
 /**
  * 
  * @author xiaoguang.gao
@@ -55,7 +51,7 @@ public class ConfigBeanInvocationHandler implements InvocationHandler {
 	 *            : The implementation
 	 * @throws NoSuchMethodException
 	 */
-	public ConfigBeanInvocationHandler(ConfigBeanDetail detail) throws NoSuchMethodException, PersistenceException {
+	public ConfigBeanInvocationHandler(ConfigBeanDetail detail) throws NoSuchMethodException {
 		this.beanDetail = detail;
 		if (detail == null) {
 			s_logger.warn("detail is null. return null.");
@@ -71,15 +67,6 @@ public class ConfigBeanInvocationHandler implements InvocationHandler {
 		// The keyname is used to persist the information. We use the partition name if supplied:
 		keyName = jmxDomainName + ":" + mbeanName;
 		m_allBeanList.put(keyName, detail); // init the attlist map
-		IPersistence persistence = detail.getPersistence();
-
-		try {
-			persistence.setMBeanDesc(keyName, detail.getDescription());
-		} catch (PersistenceException e) {
-			s_logger.warn(String.format("Store the description of mbean: %s in persistence datasource failed", keyName), e);
-		} catch (RuntimeException re) {
-			s_logger.warn(String.format("Encounter RuntimeException when store the description of mbean: %s.", keyName), re);
-		}
 		
 		Map<String, AttributeHandler> attributeHandlers = new HashMap<String, AttributeHandler>();
 		for (Method method : m_interface.getMethods()) {
@@ -126,8 +113,6 @@ public class ConfigBeanInvocationHandler implements InvocationHandler {
 			}
 			
 		}
-		//monitor the bean from zk
-		ZkClient.getInstance().handleBean(detail);
 	}
 
 	/**
@@ -138,7 +123,6 @@ public class ConfigBeanInvocationHandler implements InvocationHandler {
 	 * @return
 	 */
 	private AttributeHandler buildAttributeHandler(final Method method, final String attName) {
-		//final IPersistence m_properties = attDetail.getPersistence();
 		return new AttributeHandler() {
 			public MethodInvocationHandler getGetterHandler() {
 				return new MethodInvocationHandler() {
@@ -170,16 +154,6 @@ public class ConfigBeanInvocationHandler implements InvocationHandler {
 							ConcurrentHashMap<String, AttributeDetail> m_attributeList = m_allBeanList.get(keyName).getAttDetailMap();
 							if(m_attributeList.containsKey(attName)){
 								m_attributeList.get(attName).setValue(value);
-								//sync to zk
-								ThreadPool.Execute(new Runnable(){
-
-									@Override
-									public void run() {
-										String domain = beanDetail.getMbeanInfo().domain;
-										String group = beanDetail.getMbeanInfo().group;
-										String name = beanDetail.getMbeanInfo().name;
-										ZkClient.getInstance().setAttValue(domain, group, name, attName, value);
-									}});
 							}
 						}
 						return null;
