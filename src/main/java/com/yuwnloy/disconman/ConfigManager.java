@@ -55,7 +55,6 @@ public class ConfigManager {
 		//
 		// configMBean = null;
 		s_instance = null;
-		ThreadPool.shutdown();
 	}
 
 	/**
